@@ -1,0 +1,5 @@
+mcp[cli]
+
+ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git
+questionary
+checkov
