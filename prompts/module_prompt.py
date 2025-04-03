@@ -1,8 +1,8 @@
 import os
-from config import mcp, working_directory
+from config import mcp
 
 # Enhanced prompt to derive module requirements and implement Terraform
-@mcp.prompt()
+@mcp.prompt(name="New Module Generation")
 def generate_new_module() -> str:
     """
     Enhanced prompt to be used for creating a new module. This will read from the `generate_module.md` file.

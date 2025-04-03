@@ -6,22 +6,8 @@ import subprocess
 import config
 from config import mcp, working_directory  # Import from config for shared resources
 
-
-# Define your tools here
-@mcp.tool()
-def derive_module_path(relative_path: str, intent: str, flavor: str) -> str:
-    """
-    Tool to derive the complete module path based on parameters.
-
-    Args:
-    - relative_path (str): The relative path for the module.
-    - intent (str): The intent for the module.
-    - flavor (str): The flavor of the module.
-
-    Returns:
-    - str: The complete module path.
-    """
-    return os.path.join(working_directory, relative_path, intent, flavor, '1.0')
+from click.testing import CliRunner
+from ftf_cli.cli import cli
 
 
 @mcp.tool()
@@ -194,22 +180,16 @@ def run_ftf_add_input(module_path: str, profile: str, input_name: str, display_n
 def run_ftf_command(command) -> str:
     if not command[0] == 'ftf':
         return "Error: Only 'ftf' commands are allowed."
-    env = os.environ.copy()
-    result = subprocess.run(
-        command,
-        check=True,
-        cwd="/Users/anshulsao/PycharmProjects/codeAssist/venv/bin/",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        shell=True,
-        env=env
-    )
 
-    if result.stdout:
-        print(result.stdout.strip())
-    if result.stderr:
-        print(result.stderr.strip(), file=sys.stderr)
+    runner = CliRunner()
 
-    combined_output = result.stdout.strip() + '\n Error: ' + result.stderr.strip() if result.stderr else result.stdout.strip()
-    return combined_output
+    # Remove starting 'ftf' from command to align with Click command structure
+    result = runner.invoke(cli, command[1:])
+
+    if result.exit_code != 0:
+        error_message = f"Error executing command: {result.output}"
+        print(error_message, file=sys.stderr)
+        return error_message
+
+    output_message = result.output
+    return output_message
