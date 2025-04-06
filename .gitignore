@@ -1,2 +1,13 @@
+# Ignore all cache directories
+__pycache__/
+
+# Ignore IDE specific directories/files
 claude/
 .idea
+
+# Add other common patterns
+*.pyc
+.DS_Store
+
+# Ignore environment files
+.env

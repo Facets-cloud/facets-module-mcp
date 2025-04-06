@@ -5,6 +5,7 @@ from tools import run_ftf_command
 import config
 from tools.ftf_tools import run_ftf_generate_module, run_ftf_add_variable, \
     run_ftf_validate_directory, run_ftf_preview_module, run_ftf_expose_provider, run_ftf_add_input
+from tools.module_files import read_file, write_file, list_files
 from prompts.module_prompt import generate_new_module
 
 # Say Hi tool

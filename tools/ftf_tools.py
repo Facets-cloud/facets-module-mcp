@@ -39,19 +39,28 @@ def run_ftf_generate_module(intent: str, flavor: str, cloud: str, title: str, de
 
 
 @mcp.tool()
-def run_ftf_add_variable(module_path: str, variable_name: str, variable_type: str, variable_description: str) -> str:
+def run_ftf_add_variable(module_path: str, variable_name: str, variable_type: str, variable_description: str, options: str = "") -> str:
     """
-    Tool to add a variable to a module configuration.
+      Adds a new variable to a Terraform module, updating both `facets.yaml` and `variables.tf`.
 
-    Args:
-    - module_path (str): The path to the module.
-    - variable_name (str): The name of the variable to add.
-    - variable_type (str): The type of the variable.
-    - variable_description (str): A description for the variable.
+      Parameters:
+      - module_path (str): Absolute or relative path to the  module directory.
 
-    Returns:
-    - str: The output from the FTF command execution.
-    """
+      - variable_name (str): The name of the variable to add.
+          Can be dot-separated (e.g., "config.database.host") to create nested structure.
+
+      - variable_type (str): The base type of the variable.
+          Must be one of the allowed types (e.g., string, number, boolean, enum).
+
+      - variable_description (str): A human-readable description for the variable.
+          This will be added to the `facets.yaml` under the variable's schema.
+
+      - options (str, optional): Comma-separated values, required only when the type is `enum`.
+          These values will populate the `enum` field in the schema.
+
+      Returns:
+      - str: Success or error message, summarizing what was added and where.
+      """
     command = [
         "ftf", "add-variable",
         "-n", variable_name,
@@ -59,6 +68,10 @@ def run_ftf_add_variable(module_path: str, variable_name: str, variable_type: st
         "-d", variable_description,
         module_path
     ]
+
+    if variable_type == "enum" and options:
+        command.extend(["--options", options])
+
     return run_ftf_command(command)
 
 
