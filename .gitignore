@@ -5,6 +5,11 @@ __pycache__/
 claude/
 .idea
 
+# Python packaging
+build/
+dist/
+*.egg-info/
+
 # Add other common patterns
 *.pyc
 .DS_Store
