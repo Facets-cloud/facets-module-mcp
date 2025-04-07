@@ -75,9 +75,12 @@ def _ftf_login(profile: str, username: str, token: str, control_plane_url: str) 
     print(f"Login result: {result}", file=sys.stderr)
 
 
-# Main execution
-if __name__ == "__main__":
+def main():
     # Initialize environment
     init_environment()
     # Original main execution for MCP server
     mcp.run(transport='stdio')
+
+
+if __name__ == "__main__":
+    main()

@@ -57,6 +57,33 @@ MCP Server for Facets Module, designed to generate new capabilities by writing n
 
 Ensure you have Python and necessary dependencies installed. Configure your working directory in `config.py`.
 
+### Integration with Claude
+
+To integrate this MCP server with Claude, add the following configuration to your `claude_desktop_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "facets-module": {
+      "command": "python",
+      "args": [
+        "facets_server.py",
+        "<YOUR_WORKING_DIRECTORY>"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "FACETS_PROFILE": "<YOUR_PROFILE>",
+        "FACETS_USERNAME": "<YOUR_USERNAME>",
+        "FACETS_TOKEN": "<YOUR_TOKEN>",
+        "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
+      }
+    }
+  }
+}
+```
+
+Ensure you replace placeholder values such as `<YOUR_WORKING_DIRECTORY>`, `<YOUR_PROFILE>`, `<YOUR_USERNAME>`, `<YOUR_TOKEN>`, and `<YOUR_CONTROL_PLANE_URL>` with your specific configurations. This setup will handle the environment initialization and logging as defined in `facets_server.py`.
+
 ### Usage
 
 Integrate with your cloud environment and leverage the tools and prompts provided:
