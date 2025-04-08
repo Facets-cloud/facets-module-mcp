@@ -4,7 +4,7 @@ __pycache__/
 # Ignore IDE specific directories/files
 claude/
 .idea
-
+uv.lock
 # Python packaging
 build/
 dist/

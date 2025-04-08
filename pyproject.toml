@@ -1,0 +1,21 @@
+[project]
+name = "facets-mcp-server"
+version = "0.1.0"
+description = "MCP server for Facets"
+authors = [
+    { name = "Anshul Sao", email = "anshul@example.com" }
+]
+dependencies = [
+    "mcp[cli]",
+    "checkov",
+    "questionary",
+    "ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git"
+]
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+# (optional section for uv settings — no problem keeping this here)

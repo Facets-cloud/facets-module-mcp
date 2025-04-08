@@ -55,24 +55,25 @@ MCP Server for Facets Module, designed to generate new capabilities by writing n
 
 ### Prerequisites
 
-Ensure you have Python and necessary dependencies installed. Configure your working directory in `config.py`.
+### ✅ Claude Integration (with `uv`)
 
-### Integration with Claude
-
-To integrate this MCP server with Claude, add the following configuration to your `claude_desktop_config.json` file:
+To integrate this MCP server with Claude using [`uv`](https://github.com/astral-sh/uv), add the following configuration to your `claude_desktop_config.json` file:
 
 ```json
 {
   "mcpServers": {
     "facets-module": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "--directory",
+        "/Path/to/mcp_server",
+        "run",
         "facets_server.py",
-        "<YOUR_WORKING_DIRECTORY>"
+        "/Path/to/working-directory"
       ],
       "env": {
         "PYTHONUNBUFFERED": "1",
-        "FACETS_PROFILE": "<YOUR_PROFILE>",
+        "FACETS_PROFILE": "signifyd",
         "FACETS_USERNAME": "<YOUR_USERNAME>",
         "FACETS_TOKEN": "<YOUR_TOKEN>",
         "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
@@ -82,8 +83,9 @@ To integrate this MCP server with Claude, add the following configuration to you
 }
 ```
 
-Ensure you replace placeholder values such as `<YOUR_WORKING_DIRECTORY>`, `<YOUR_PROFILE>`, `<YOUR_USERNAME>`, `<YOUR_TOKEN>`, and `<YOUR_CONTROL_PLANE_URL>` with your specific configurations. This setup will handle the environment initialization and logging as defined in `facets_server.py`.
-
+> 🧠 Replace `<YOUR_USERNAME>`, `<YOUR_TOKEN>`, and `<YOUR_CONTROL_PLANE_URL>` with your actual environment variables.  
+> The `uv` runner will handle dependency resolution and environment setup automatically based on the `pyproject.toml` in your module directory.
+> If already logged in with ftf just specify FACETS_PROFILE
 ### Usage
 
 Integrate with your cloud environment and leverage the tools and prompts provided:
