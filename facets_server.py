@@ -5,6 +5,7 @@ import config
 from tools.ftf_tools import *
 from tools.module_files import *
 from tools.instructions import *
+from tools.existing_modules import *
 from prompts.module_prompt import *
 
 # Say Hi tool
