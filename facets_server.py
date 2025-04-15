@@ -1,12 +1,11 @@
 import sys
 import os
 from config import mcp  # Import from config for shared resources
-from tools import run_ftf_command
 import config
-from tools.ftf_tools import run_ftf_generate_module, run_ftf_add_variable, \
-    run_ftf_validate_directory, run_ftf_preview_module, run_ftf_expose_provider, run_ftf_add_input
-from tools.module_files import read_file, write_file, list_files
-from prompts.module_prompt import generate_new_module
+from tools.ftf_tools import *
+from tools.module_files import *
+from tools.instructions import *
+from prompts.module_prompt import *
 
 # Say Hi tool
 @mcp.tool()
