@@ -1,6 +1,7 @@
 
 ### 📏 Terraform Guidelines
 
+Very Important: TF Version is 1.5.7
 Terraform logic in `main.tf` must be written using only the following variable paths:
 
 #### ✅ Allowed Variable Sources

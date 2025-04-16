@@ -1,11 +1,9 @@
-# This file contains tools for working with existing Terraform modules
-
 import os
 import sys
 import json
 import yaml
-import glob
-from typing import Optional, Dict, Any, List
+from pathlib import Path
+from typing import Dict, Any
 from config import mcp, working_directory
 
 
@@ -13,8 +11,10 @@ from config import mcp, working_directory
 def get_available_modules() -> str:
     """
     Scan the working directory recursively for facets.yaml files to identify
-    all available Terraform modules. So that user can start working on existing modules as well.
-    
+    all available Terraform modules. Also fetch content of outputs.tf if it exists.
+    After:
+        read instructions using get_all_module_writing_instructions
+
     Returns:
         str: JSON string containing a list of modules with their details:
              - path: Path to the module directory
@@ -22,55 +22,50 @@ def get_available_modules() -> str:
              - flavor: The module's flavor value
              - version: The module's version value
              - outputs: The module's outputs section
+             - outputs_tf: Raw string content of outputs.tf (if present)
     """
     try:
         modules = []
-        
-        # Search recursively for facets.yaml files
-        for root, dirs, files in os.walk(working_directory):
-            if 'facets.yaml' in files:
-                # Skip .terraform directories 
-                if '.terraform' in root:
-                    continue
-                    
-                module_path = root
-                facets_path = os.path.join(root, 'facets.yaml')
-                
-                try:
-                    # Parse the facets.yaml file
-                    with open(facets_path, 'r') as f:
-                        facets_content = yaml.safe_load(f)
-                    
-                    # Extract relevant information
-                    intent = facets_content.get('intent', '')
-                    flavor = facets_content.get('flavor', '')
-                    version = facets_content.get('version', '')
-                    outputs = facets_content.get('outputs', {})
-                    
-                    # Add module info to the list
-                    modules.append({
-                        'path': module_path,
-                        'intent': intent,
-                        'flavor': flavor,
-                        'version': version,
-                        'outputs': outputs
-                    })
-                except Exception as e:
-                    # If there's an error parsing this file, skip it but log the error
-                    print(f"Error parsing {facets_path}: {str(e)}", file=sys.stderr)
-                    continue
-        
-        # Return JSON string with module information
+        root_path = Path(working_directory)
+
+        for facets_file in root_path.rglob("facets.yaml"):
+            if ".terraform" in facets_file.parts:
+                continue
+
+            module_path = facets_file.parent
+            try:
+                with open(facets_file, 'r') as f:
+                    facets_content = yaml.safe_load(f)
+
+                # Read outputs.tf if present
+                outputs_tf_path = module_path / "outputs.tf"
+                outputs_tf_content = ""
+                if outputs_tf_path.exists():
+                    outputs_tf_content = outputs_tf_path.read_text()
+
+                modules.append({
+                    "path": str(module_path),
+                    "intent": facets_content.get("intent", ""),
+                    "flavor": facets_content.get("flavor", ""),
+                    "version": facets_content.get("version", ""),
+                    "outputs": facets_content.get("outputs", {}),
+                    "outputs_tf": outputs_tf_content
+                })
+
+            except Exception as e:
+                print(f"Error parsing {facets_file}: {str(e)}", file=sys.stderr)
+                continue
+
         return json.dumps({
-            'modules': modules,
-            'count': len(modules)
+            "modules": modules,
+            "count": len(modules)
         }, indent=2)
-        
+
     except Exception as e:
         error_message = f"Error scanning for modules: {str(e)}"
         print(error_message, file=sys.stderr)
         return json.dumps({
-            'error': error_message,
-            'modules': [],
-            'count': 0
+            "error": error_message,
+            "modules": [],
+            "count": 0
         })
