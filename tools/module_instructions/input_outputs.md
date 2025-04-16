@@ -20,7 +20,7 @@ inputs:
 #### 🔑 Common Fields:
 
 - **`type`**: Required. Can reference:
-    - Another module’s output (e.g. `@outputs/databricks_account`)
+    - Another module’s output (e.g. `@outputs/custom_databricks_account`) ALWAYS INCLUDE CUSTOM PREFIX FOR TYPES
     - Primitive type (e.g. `string`, `number`, `object`)
 
 #### 🛠 Terraform Mapping

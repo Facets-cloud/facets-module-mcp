@@ -131,3 +131,5 @@ variable "instance" {
   })
 }
 ```
+
+**VERY VERY IMPORTANT: In Facets YAML Sample section only put the default values where specified at field level. Never fabricate a value**

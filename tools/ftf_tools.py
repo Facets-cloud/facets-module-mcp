@@ -105,3 +105,35 @@ def run_ftf_command(command) -> str:
 
     output_message = result.output
     return output_message
+
+@mcp.tool()
+def run_ftf_preview_module(module_path: str, profile: str, auto_create_intent: bool = True, publishable: bool = False,
+                           git_repo_url: str = "temp", git_ref: str = "ai") -> str:
+    """
+    Tool to preview a module using FTF CLI.
+
+    Args:
+    - module_path (str): The path to the module.
+    - profile (str): Profile to use for the operation.
+    - auto_create_intent (bool): Flag to auto-create intent if not exists.
+    - publishable (bool): Flag to indicate if the module is publishable.
+    - git_repo_url (str): Git repository URL.
+    - git_ref (str): Git reference or branch name.
+
+    Returns:
+    - str: The output from the FTF command execution.
+    """
+    command = [
+        "ftf", "preview-module",
+        module_path,
+        "-p", profile
+    ]
+    if auto_create_intent:
+        command.extend(["-a", auto_create_intent])
+    if publishable:
+        command.extend(["-f", publishable])
+    if git_repo_url:
+        command.extend(["-g", git_repo_url])
+    if git_ref:
+        command.extend(["-r", git_ref])
+    return run_ftf_command(command)
