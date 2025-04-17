@@ -1,21 +1,31 @@
 ## 🧠 Knowledge Base: Adding Developer Inputs in a Facets Module
 
-This article describes how to define **developer-facing inputs** (`spec:`) in a Facets module using supported JSON Schema patterns and synchronize them with Terraform.
+This article describes how to define **developer-facing inputs** (`spec:`) in a Facets module using supported JSON
+Schema patterns and synchronize them with Terraform.
+
+A Facets module can be designed for either developer self-service or operations usage. For developer self-service, the
+organization’s defaults are predefined in the code and modeling, with only the necessary options for developers exposed.
+These options may be further abstracted to simplify the user experience. In contrast, for operations usage, the module
+can expose the corresponding cloud configurations based on the specific requirements provided by the user.
+
 
 ---
 
 ### 📂 Section: `spec` in `facets.yaml`
 
 #### ✅ Purpose:
+
 Defines inputs that developers can configure when using the module.
 
 #### 🔤 Supported Types:
+
 - `string`
 - `number`
 - `boolean`
 - `enum` (must be `type: string` with an `enum` list)
 
 #### 🧹 Supported Fields:
+
 - `type`
 - `title`
 - `description`
@@ -26,6 +36,7 @@ Defines inputs that developers can configure when using the module.
 - `minLength`, `maxLength`
 
 #### ⚠️ Not Supported:
+
 - Arrays directly under `spec:`  
   ➔ Use `patternProperties` to define maps with structured values instead.
 
@@ -34,37 +45,13 @@ Defines inputs that developers can configure when using the module.
 ### 📘 JSON Schema Patterns in Facets
 
 #### 1. **Nested Objects**
+
 Group related inputs.
 
 ```yaml
 type: object
 properties:
   ...
-```
-
-#### 2. **Pattern-based Maps**
-Used to define dynamic keys with structured values.
-
-```yaml
-services:
-  type: object
-  patternProperties:
-    "^[a-zA-Z0-9_.\\/\\-]*$":   # Facets-specific key pattern
-      type: object
-      properties:
-        service_api:
-          type: string
-```
-
-✅ **Recommended Key Pattern:**  
-`"^[a-zA-Z0-9_.\\/\\-]*$"`  
-Supports keys like `compute.googleapis.com`, `storage/v1`.
-
-#### ❌ Do NOT Use:
-```yaml
-type: array
-items:
-  type: string
 ```
 
 ---
@@ -78,7 +65,7 @@ variable "instance" {
   type = object({
     spec = object({
       <variable_name> = <hcl_type>
-    })
+      } )
   })
 }
 ```
@@ -110,6 +97,7 @@ Run this before starting Terraform development.
 #### Add a boolean field: `enable_encryption`
 
 **facets.yaml**
+
 ```yaml
 spec:
   properties:
@@ -122,6 +110,7 @@ spec:
 ```
 
 **variables.tf**
+
 ```hcl
 variable "instance" {
   type = object({
@@ -132,4 +121,5 @@ variable "instance" {
 }
 ```
 
-**VERY VERY IMPORTANT: In Facets YAML Sample section only put the default values where specified at field level. Never fabricate a value**
+**VERY VERY IMPORTANT: In Facets YAML Sample section only put the default values where specified at field level. Never
+fabricate a value**

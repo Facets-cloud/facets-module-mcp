@@ -42,7 +42,6 @@ outputs:
         source: <provider_source>
         version: <provider_version>
         attributes:
-          <provider_block>:
             <field_1>: attributes.<output_field_1>
             <field_2>: attributes.<output_field_2>
             ...

@@ -8,7 +8,7 @@ from config import mcp, working_directory
 
 
 @mcp.tool()
-def get_available_modules() -> str:
+def get_local_modules() -> str:
     """
     Scan the working directory recursively for facets.yaml files to identify
     all available Terraform modules. Also fetch content of outputs.tf if it exists.

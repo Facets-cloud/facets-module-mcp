@@ -20,7 +20,7 @@ inputs:
 #### 🔑 Common Fields:
 
 - **`type`**: Required. Can reference:
-    - Another module’s output (e.g. `@outputs/custom_databricks_account`) ALWAYS INCLUDE CUSTOM PREFIX FOR TYPES
+    - Another module’s output (e.g. `@outputs/custom-databricks-account`) ALWAYS INCLUDE CUSTOM PREFIX FOR TYPES
     - Primitive type (e.g. `string`, `number`, `object`)
 
 #### 🛠 Terraform Mapping
@@ -68,7 +68,7 @@ outputs:
 
 #### 🔑 Common Fields:
 
-- **`type`**: Required. Output classification, typically `@outputs/<type>`.
+- **`type`**: Required. Output classification, typically `@outputs/<type>`. Always use - in type instead of _ if required
 - **`attributes`**: Logical-to-Terraform mapping for each exposed output value.
 
 #### 💡 Example:
@@ -76,7 +76,7 @@ outputs:
 ```yaml
 outputs:
   default:
-    type: "@outputs/databricks_account"
+    type: "@outputs/databricks-account"
 ```
 
 ---

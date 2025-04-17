@@ -44,9 +44,9 @@ x-ui-toggle: true  # Render this field group as collapsible. Use this to keep th
 ```
 
 ```yaml
-x-ui-yaml-editor: true  # Use YAML editor for complex object input. Use this when you want to surface a yaml editor
+x-ui-yaml-editor: true  # Use YAML editor for complex object input. Use this when you want to surface a yaml editor, use this for complex objects only
 ```
-
+DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 ---
 
 ### ❗ Validation & Conditional Display
