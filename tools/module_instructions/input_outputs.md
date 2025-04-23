@@ -1,62 +1,6 @@
-## 📘 Facets Module: `inputs` and `outputs` Reference
-
-This document outlines the structure and purpose of `inputs` and `outputs` in a Facets module’s `facets.yaml` file.
-These fields enable composability and inter-module wiring within the Facets platform.
-
----
-
-### 🔹 `inputs`
-
-Defines what data this module expects from other modules or user configuration.
-
-#### ✅ Syntax:
-
-```yaml
-inputs:
-  <input_name>:
-    type: <@outputs/type> | <primitive_type>
-```
-
-#### 🔑 Common Fields:
-
-- **`type`**: Required. Can reference:
-    - Another module’s output (e.g. `@outputs/custom-databricks-account`) ALWAYS INCLUDE CUSTOM PREFIX FOR TYPES
-    - Primitive type (e.g. `string`, `number`, `object`)
-
-#### 🛠 Terraform Mapping
-
-When a module consumes outputs from another module, the `inputs` field must be reflected in the consuming module’s
-`variables.tf`:
-
-```hcl
-variable "inputs" {
-  description = "A map of inputs requested by the module developer."
-  type = object({
-    <input_name> = object({
-    <derived_output_attribute> : <type>
-    } )
-    })
-}
-```
-
-The input type object is derived from the `outputs.tf` of the producing module using:
-
-```hcl
-locals {
-  output_interfaces = {}
-  output_attributes = {}
-}
-```
-
-These act as contracts for consuming modules. 
-
-IMPORTANT: read terraform code of outputting module to get schema of the outputs
-
----
-
 ### 🔹 `outputs`
 
-Defines the values this module makes available to other modules.
+Defines the values this module exposes for consumption by other modules.
 
 #### ✅ Syntax:
 
@@ -68,17 +12,29 @@ outputs:
 
 #### 🔑 Common Fields:
 
-- **`type`**: Required. Output classification, typically `@outputs/<type>`. Always use - in type instead of _ if required
-- **`attributes`**: Logical-to-Terraform mapping for each exposed output value.
+- **`type`**: Required. Specifies the classification of the output (e.g. `@outputs/databricks-account`).
+    - **Use hyphens** (`-`) in the type name instead of underscores (`_`) if needed.
+- **`output_attributes` and `output_interfaces` local variables**: These generate Terraform `output` blocks in **runtime**:
+    - `output_attributes` → corresponds to `output "attributes" { ... }`
+    - `output_interfaces` → corresponds to `output "interfaces" { ... }`
 
-#### 💡 Example:
+<important> Never generate output blocks for facets modules</important>
 
-```yaml
-outputs:
-  default:
-    type: "@outputs/databricks-account"
-```
+#### 💡 Special Notes:
 
----
-Properly defined `inputs` and `outputs` make modules interoperable, composable, and reusable in Facets' orchestrated
-environments.
+- **`default`** is a **reserved keyword** that refers to the full output of the module. It is treated as the default
+  export and typically maps to the entire structured response from Terraform.
+- A module can expose **multiple outputs**, including specific nested fields within the primary structure.
+    - Use dot notation to reference these nested fields explicitly:
+
+      ```yaml
+      outputs:
+        default:
+          type: "@outputs/gcp-project"
+        attributes.project_id:
+          type: "@outputs/project-id"
+      ```
+<important> no need to add properties in the outputs block like inputs.<important>
+      This allows consuming modules to wire only the specific part of the output they require, while still having the
+      option to consume the entire object via `default`.
+
