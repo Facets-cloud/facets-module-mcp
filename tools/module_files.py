@@ -10,6 +10,7 @@ from config import mcp, working_directory
 @mcp.tool()
 def list_files(module_path: str) -> list:
     """
+    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
     Lists all files in the given module path, ensuring we stay within the working directory.
     Always ask User if he wants to add any variables or use any other FTF commands
 
@@ -36,6 +37,7 @@ def list_files(module_path: str) -> list:
 def read_file(file_path: str) -> str:
     """
     Reads the content of a file, ensuring it is within the working directory.
+    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
 
     Args:
         file_path (str): The path to the file.
@@ -58,7 +60,8 @@ def read_file(file_path: str) -> str:
 def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True) -> str:
     """
     Writes facets.yaml configuration file for a Terraform module.
-    
+    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
+
     Steps for safe variable update:
 
     1. Always run with `dry_run=True` first — this is an irreversible action.

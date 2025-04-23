@@ -19,7 +19,8 @@ def run_ftf_generate_module(intent: str, flavor: str, cloud: str, title: str, de
     Step 2 - Present the dry run output to the user in textual format.
     Step 3 - Ask if user will like to make any changes in passed arguments and modify them
     Step 4 - Call the tool without dry run
-    Step 5 - Read Instructions using get_important_module_writing_instructions
+    Step 5 - Read Instructions using FIRST_STEP_get_instructions
+    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
 
     Args:
     - module_path (str): The path to the module.

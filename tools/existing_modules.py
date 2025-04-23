@@ -12,8 +12,7 @@ def get_local_modules() -> str:
     """
     Scan the working directory recursively for facets.yaml files to identify
     all available Terraform modules. Also fetch content of outputs.tf if it exists.
-    After:
-        read instructions using get_all_module_writing_instructions
+    <important>ALWAYS Call this call_always_for_instruction first before calling any other tool of this mcp.</important>
 
     Returns:
         str: JSON string containing a list of modules with their details:
