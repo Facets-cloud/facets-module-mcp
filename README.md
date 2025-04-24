@@ -46,6 +46,7 @@ To integrate this MCP server with Claude using [`uv`](https://github.com/astral-
    ```bash
    brew install uv
    ```
+   For alternative installation methods, see the [official uv installation documentation](https://docs.astral.sh/uv/getting-started/installation/). 
 
 2. Add the following configuration to your `claude_desktop_config.json` file:
 ```json
@@ -62,7 +63,7 @@ To integrate this MCP server with Claude using [`uv`](https://github.com/astral-
       ],
       "env": {
         "PYTHONUNBUFFERED": "1",
-        "FACETS_PROFILE": "signifyd",
+        "FACETS_PROFILE": "default",
         "FACETS_USERNAME": "<YOUR_USERNAME>",
         "FACETS_TOKEN": "<YOUR_TOKEN>",
         "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
