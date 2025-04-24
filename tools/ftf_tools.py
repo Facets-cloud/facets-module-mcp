@@ -108,33 +108,59 @@ def run_ftf_command(command) -> str:
     return output_message
 
 @mcp.tool()
-def run_ftf_preview_module(module_path: str, profile: str, auto_create_intent: bool = True, publishable: bool = False,
-                           git_repo_url: str = "temp", git_ref: str = "ai") -> str:
+def run_ftf_preview_module(module_path: str, profile: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
     """
     Tool to preview a module using FTF CLI.
+    Git repository details are automatically extracted from the local working directory's .git folder.
 
     Args:
     - module_path (str): The path to the module.
     - profile (str): Profile to use for the operation.
     - auto_create_intent (bool): Flag to auto-create intent if not exists.
     - publishable (bool): Flag to indicate if the module is publishable.
-    - git_repo_url (str): Git repository URL.
-    - git_ref (str): Git reference or branch name.
 
     Returns:
     - str: The output from the FTF command execution.
     """
+    # Get git repository URL from .git/config
+    git_repo_url = "temp"  # Default fallback value
+    git_ref = "ai"        # Default fallback value
+    
+    try:
+        # Extract remote URL from git config
+        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], 
+                               cwd=working_directory,
+                               capture_output=True, 
+                               text=True, 
+                               check=False)
+        if result.returncode == 0 and result.stdout.strip():
+            git_repo_url = result.stdout.strip()
+        
+        # Extract current branch name
+        result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                               cwd=working_directory,
+                               capture_output=True,
+                               text=True,
+                               check=False)
+        if result.returncode == 0 and result.stdout.strip():
+            git_ref = result.stdout.strip()
+            
+        print(f"Using git repo: {git_repo_url}, git ref: {git_ref}", file=sys.stderr)
+    except Exception as e:
+        print(f"Error extracting git details: {str(e)}. Using defaults.", file=sys.stderr)
+    
     command = [
         "ftf", "preview-module",
         module_path,
         "-p", profile
     ]
     if auto_create_intent:
-        command.extend(["-a", auto_create_intent])
+        command.extend(["-a", str(auto_create_intent)])
     if publishable:
-        command.extend(["-f", publishable])
-    if git_repo_url:
-        command.extend(["-g", git_repo_url])
-    if git_ref:
-        command.extend(["-r", git_ref])
+        command.extend(["-f", str(publishable)])
+    
+    # Always include git details (now from local repository)
+    command.extend(["-g", git_repo_url])
+    command.extend(["-r", git_ref])
+    
     return run_ftf_command(command)
