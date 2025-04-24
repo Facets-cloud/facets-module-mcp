@@ -108,14 +108,13 @@ def run_ftf_command(command) -> str:
     return output_message
 
 @mcp.tool()
-def run_ftf_preview_module(module_path: str, profile: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
+def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
     """
     Tool to preview a module using FTF CLI.
     Git repository details are automatically extracted from the local working directory's .git folder.
 
     Args:
     - module_path (str): The path to the module.
-    - profile (str): Profile to use for the operation.
     - auto_create_intent (bool): Flag to auto-create intent if not exists.
     - publishable (bool): Flag to indicate if the module is publishable.
 
@@ -151,8 +150,7 @@ def run_ftf_preview_module(module_path: str, profile: str, auto_create_intent: b
     
     command = [
         "ftf", "preview-module",
-        module_path,
-        "-p", profile
+        module_path
     ]
     if auto_create_intent:
         command.extend(["-a", str(auto_create_intent)])
