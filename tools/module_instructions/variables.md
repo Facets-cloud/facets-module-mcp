@@ -78,6 +78,7 @@ services = map(object({
 }))
 ```
 
+Make sure to include Terraform variable validations for each spec field with appropriate error messages. The validations must be only from var.instance and var.inputs.
 ---
 
 ### ✅ Validation
