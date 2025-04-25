@@ -4,13 +4,14 @@ import os
 import sys
 import difflib
 from typing import Optional, Dict, Any, List
+
 from config import mcp, working_directory
+from tools.ftf_tools import run_ftf_command
 
 
 @mcp.tool()
 def list_files(module_path: str) -> list:
     """
-    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
     Lists all files in the given module path, ensuring we stay within the working directory.
     Always ask User if he wants to add any variables or use any other FTF commands
 
@@ -64,11 +65,13 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
 
     Steps for safe variable update:
 
-    1. Always run with `dry_run=True` first — this is an irreversible action.
+    1. Always run with `dry_run=True` first  2 this is an irreversible action.
     2. Parse and display a diff:
-       ➕ Added
-       🔁 Modified (old → new)
-       ❌ Removed
+       
+
+ Added
+        Modified (old  new)
+        Removed
     3. Ask user if they want to edit or add variables and wait for his input.
     4. Only if user **explicitly confirms**, run again with `dry_run=False`.
     
@@ -87,32 +90,20 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         full_module_path = os.path.abspath(module_path)
         if not full_module_path.startswith(os.path.abspath(working_directory)):
             return "Error: Attempt to write files outside of the working directory."
-        
-        # Check if module directory exists
+
+        # Ensure module directory exists
         if not os.path.exists(full_module_path):
-            if dry_run:
-                # Create structured output for directory creation
-                file_preview = generate_file_previews(facets_yaml)
-                
-                import json
-                result = {
-                    "type": "dry_run",
-                    "module_path": module_path,
-                    "changes": [f"Would create new directory {full_module_path}"],
-                    "file_preview": file_preview,
-                    "instructions": "This will create a new module directory with facets.yaml. Analyze the content and ask the user explicitly if they want to proceed with these changes. Only if the user confirms, run the write_config_files function again with dry_run=False."
-                }
-                
-                return json.dumps(result, indent=2)
-            else:
-                os.makedirs(full_module_path, exist_ok=True)
-        
+            os.makedirs(full_module_path, exist_ok=True)
+
+        # Run validation method on facets_yaml and module_path
+        _validate_yaml(module_path, facets_yaml)
+
         changes = []
         current_facets_content = ""
-        
+
         # Handle facets.yaml
         facets_path = os.path.join(full_module_path, "facets.yaml")
-        
+
         # Check if file exists and read its content
         if os.path.exists(facets_path):
             try:
@@ -120,7 +111,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
                     current_facets_content = f.read()
             except Exception as e:
                 return f"Error reading existing facets.yaml: {str(e)}"
-        
+
         # Generate diff for facets.yaml
         if dry_run:
             if not current_facets_content:
@@ -137,7 +128,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
                 error_msg = f"Error writing facets.yaml: {str(e)}"
                 changes.append(error_msg)
                 print(error_msg, file=sys.stderr)
-        
+
         if dry_run:
             # Create structured output with JSON
             file_preview = generate_file_previews(facets_yaml, current_facets_content)
@@ -262,3 +253,36 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         error_message = f"Error writing resource file: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
+
+
+def _validate_yaml(module_path: str, facets_yaml: str) -> str:
+    """
+    Private method to validate facets_yaml content.
+    Writes facets_yaml to facets.yaml.new in module_path for validation, then deletes it.
+    Returns an error message string if validation fails, or empty string if valid.
+    """
+    import os
+
+    temp_path = os.path.join(os.path.abspath(module_path), "facets.yaml.new")
+    try:
+        with open(temp_path, 'w') as temp_file:
+            temp_file.write(facets_yaml)
+    except Exception as e:
+        return f"Error writing temporary validation file: {str(e)}"
+    command = [
+        "ftf", "validate-facets",
+        "--filename", "facets.yaml.new",
+        module_path
+    ]
+
+    validation_error = run_ftf_command(command)
+
+    try:
+        os.remove(temp_path)
+    except Exception:
+        pass
+
+    if validation_error.startswith("Error executing command"):
+        raise RuntimeError(validation_error)
+
+    return validation_error

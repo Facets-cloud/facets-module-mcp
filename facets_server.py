@@ -79,8 +79,6 @@ def main():
     # Initialize environment
     init_environment()
     # Original main execution for MCP server
-    get_local_modules()
-
     mcp.run(transport='stdio')
 
 
