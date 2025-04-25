@@ -11,16 +11,17 @@ from ftf_cli.cli import cli
 
 
 @mcp.tool()
-def run_ftf_generate_module(intent: str, flavor: str, cloud: str, title: str, description: str,
+def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str, title: str, description: str,
                             dry_run: bool = True) -> str:
     """
+    ⚠️ IMPORTANT: REQUIRES USER CONFIRMATION ⚠️
+    This function performs an irreversible action
+
     Tool to generate a new module using FTF CLI.
     Step 1 - ALWAYS use dry_run=True first. This is an irreversible action.
     Step 2 - Present the dry run output to the user in textual format.
     Step 3 - Ask if user will like to make any changes in passed arguments and modify them
     Step 4 - Call the tool without dry run
-    Step 5 - Read Instructions using FIRST_STEP_get_instructions
-    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
 
     Args:
     - module_path (str): The path to the module.
