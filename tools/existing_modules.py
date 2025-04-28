@@ -102,9 +102,11 @@ def get_local_modules() -> str:
         })
 
 @mcp.tool()
-def find_module(search_string: str, page: int = 1) -> str:
+def search_modules_after_confirmation(search_string: str, page: int = 1) -> str:
     """
     Search for a specific string in all facets.yaml files to filter modules.
+    This tool should only be used after confirming search intent with the user.
+For exploratory searches, first explain search capabilities before executing.
     
     Args:
         search_string (str): The string to search for in modules.
