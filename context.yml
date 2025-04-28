@@ -1,0 +1,18 @@
+context.yml: '- Updated tools/module_files.py to enhance file writing safety and modularity
+  for Terraform modules.
+
+  - write_resource_file now excludes writing outputs.tf and facets.yaml, enforcing
+  more strict validation on filenames and operation within the working directory.
+
+  - Added write_outputs function to specifically handle writing output definitions
+  to outputs.tf as a local block, supporting output attributes and interfaces.
+
+  - These changes improve the flexibility and safety of module file manipulations
+  in Terraform infrastructure code management.'
+tools/module_files.py: This file provides utility functions for managing Terraform
+  module files within a specified working directory. It includes functions to list
+  module files, read and write Terraform resource files (excluding outputs.tf, which
+  is handled separately), validate facets.yaml configuration files, and write the
+  outputs.tf file with output attributes and interfaces. The module ensures safe file
+  operations confined to the working directory and provides dry-run capabilities for
+  configuration updates.
