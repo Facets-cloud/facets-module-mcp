@@ -3,6 +3,7 @@
 import os
 import sys
 import difflib
+import json
 from typing import Optional, Dict, Any, List
 
 from config import mcp, working_directory
@@ -216,25 +217,30 @@ def generate_diff(current_content: str, new_content: str) -> str:
 @mcp.tool()
 def write_resource_file(module_path: str, file_name: str, content: str) -> str:
     """
-    Writes a Terraform resource file (main.tf, outputs.tf, variables.tf, etc.) to a module directory.
-    Use this for ANY Terraform files including variables.tf.
+    Writes a Terraform resource file (main.tf, variables.tf, etc.) to a module directory.
     
+    Does NOT allow writing outputs.tf here. To update outputs.tf, use write_outputs().
+
     Args:
         module_path (str): Path to the module directory.
-        file_name (str): Name of the file to write (e.g., "main.tf", "outputs.tf", "variables.tf").
+        file_name (str): Name of the file to write (e.g., "main.tf", "variables.tf").
         content (str): Content to write to the file.
         
     Returns:
         str: Success message or error message.
     """
     try:
+        if file_name == "outputs.tf":
+            return ("Error: Writing 'outputs.tf' is not allowed through this function. "
+                    "Please use the write_outputs() tool instead.")
+
         # Validate inputs
         if not file_name.endswith(".tf") and not file_name.endswith(".tf.tmpl"):
             return f"Error: File name must end with .tf or .tf.tmpl, got: {file_name}"
             
         if file_name == "facets.yaml":
             return "Error: For facets.yaml, please use write_config_files() instead."
-            
+
         full_module_path = os.path.abspath(module_path)
         if not full_module_path.startswith(os.path.abspath(working_directory)):
             return "Error: Attempt to write files outside of the working directory."
@@ -253,7 +259,6 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         error_message = f"Error writing resource file: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
-
 
 def _validate_yaml(module_path: str, facets_yaml: str) -> str:
     """
@@ -286,3 +291,51 @@ def _validate_yaml(module_path: str, facets_yaml: str) -> str:
         raise RuntimeError(validation_error)
 
     return validation_error
+
+@mcp.tool()
+def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
+    """
+    Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
+
+    Args:
+        module_path (str): Path to the module directory.
+        outputs_attributes (dict): Map of output attributes.
+        outputs_interfaces (dict): Map of output interfaces.
+
+    Returns:
+        str: Success or error message.
+    """
+    try:
+        full_module_path = os.path.abspath(module_path)
+        if not full_module_path.startswith(os.path.abspath(working_directory)):
+            return "Error: Attempt to write files outside of the working directory."
+
+        os.makedirs(full_module_path, exist_ok=True)
+
+        # Generate outputs.tf content with local block
+        content_lines = ["local {"]
+        if outputs_attributes:
+            content_lines.append("  outputs_attributes = {")
+            for k, v in outputs_attributes.items():
+                content_lines.append(f"    {k} = {json.dumps(v)}")
+            content_lines.append("  }")
+        if outputs_interfaces:
+            content_lines.append("  outputs_interfaces = {")
+            for k, v in outputs_interfaces.items():
+                content_lines.append(f"    {k} = {json.dumps(v)}")
+            content_lines.append("  }")
+        content_lines.append("}")
+
+        content = "\n".join(content_lines)
+
+        file_path = os.path.join(full_module_path, "outputs.tf")
+        with open(file_path, 'w') as f:
+            f.write(content)
+
+        return f"Successfully wrote outputs.tf to {file_path}"
+    except Exception as e:
+        error_message = f"Error writing outputs.tf: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return error_message
+
+
