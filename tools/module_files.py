@@ -4,10 +4,21 @@ import os
 import sys
 import difflib
 import json
+import yaml
 from typing import Optional, Dict, Any, List
 
 from config import mcp, working_directory
-from tools.ftf_tools import run_ftf_command
+from tools.ftf_tools import run_ftf_command, register_output_type
+from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+from swagger_client.rest import ApiException
+from utils.client_utils import ClientUtils
+
+# Initialize client utility
+try:
+    if not ClientUtils.initialized:
+        ClientUtils.initialize()
+except Exception as e:
+    print(f"Warning: Failed to initialize API client: {str(e)}", file=sys.stderr)
 
 
 @mcp.tool()
@@ -97,7 +108,23 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             os.makedirs(full_module_path, exist_ok=True)
 
         # Run validation method on facets_yaml and module_path
-        _validate_yaml(module_path, facets_yaml)
+        validation_error = _validate_yaml(module_path, facets_yaml)
+        if validation_error:
+            return f"Error validating facets.yaml: {validation_error}"
+
+        # Check for outputs and validate output types
+        output_validation_results = _validate_output_types(facets_yaml)
+        if output_validation_results and "missing_outputs" in output_validation_results:
+            missing_outputs = output_validation_results["missing_outputs"]
+            if missing_outputs:
+                missing_types_msg = f"Warning: The following output types do not exist and should be registered first using register_output_type:\n"
+                
+                for output_type in missing_outputs:
+                    missing_types_msg += f"- {output_type}\n"
+                
+                missing_types_msg += "\nPlease register these output types using register_output_type before writing the configuration."
+                
+                return missing_types_msg
 
         changes = []
         current_facets_content = ""
@@ -292,10 +319,89 @@ def _validate_yaml(module_path: str, facets_yaml: str) -> str:
 
     return validation_error
 
+
+def _validate_output_types(facets_yaml_content: str) -> Dict[str, Any]:
+    """
+    Private method to validate output types in facets.yaml.
+    Checks if output types mentioned in the outputs block exist in the Facets control plane.
+    
+    Args:
+        facets_yaml_content (str): Content of facets.yaml file
+        
+    Returns:
+        Dict[str, Any]: Dictionary with validation results including missing outputs
+    """
+    try:
+        # Parse YAML content
+        facets_data = yaml.safe_load(facets_yaml_content)
+        if not facets_data:
+            return {}
+        
+        # Check if outputs block exists
+        if 'outputs' not in facets_data:
+            return {}
+        
+        outputs = facets_data.get('outputs', {})
+        if not outputs:
+            return {}
+        
+        # Extract output types from outputs block
+        output_types = []
+        for output_name, output_def in outputs.items():
+            if 'type' in output_def:
+                output_type = output_def['type']
+                if output_type not in output_types:
+                    output_types.append(output_type)
+        
+        if not output_types:
+            return {}
+        
+        # Check if output types exist in Facets control plane
+        missing_output_types = []
+        
+        # Initialize API client
+        try:
+            api_client = ClientUtils.get_client()
+            output_api = UiTfOutputControllerApi(api_client)
+            
+            for output_type in output_types:
+                # Skip if not in @namespace/name format
+                if not output_type.startswith('@') or '/' not in output_type:
+                    continue
+                
+                # Split the name into namespace and name parts
+                name_parts = output_type.split('/', 1)
+                if len(name_parts) != 2:
+                    continue
+                
+                namespace, output_name = name_parts
+                
+                # Check if the output exists
+                try:
+                    output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
+                except ApiException as e:
+                    if e.status == 404:
+                        missing_output_types.append(output_type)
+                    else:
+                        print(f"Error checking output type {output_type}: {str(e)}", file=sys.stderr)
+        
+        except Exception as e:
+            print(f"Error initializing API client: {str(e)}", file=sys.stderr)
+            return {"error": f"Error checking output types: {str(e)}"}
+        
+        return {"missing_outputs": missing_output_types}
+    
+    except Exception as e:
+        print(f"Error validating output types: {str(e)}", file=sys.stderr)
+        return {"error": f"Error validating output types: {str(e)}"}
+
 @mcp.tool()
 def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
     """
     Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
+    
+    This function requires facets.yaml to exist in the module path before writing outputs.tf.
+    If facets.yaml doesn't exist, it will fail with a message instructing to call write_config_files first.
 
     Args:
         module_path (str): Path to the module directory.
@@ -309,6 +415,11 @@ def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces
         full_module_path = os.path.abspath(module_path)
         if not full_module_path.startswith(os.path.abspath(working_directory)):
             return "Error: Attempt to write files outside of the working directory."
+
+        # Check if facets.yaml exists in the module path
+        facets_path = os.path.join(full_module_path, "facets.yaml")
+        if not os.path.exists(facets_path):
+            return "Error: facets.yaml not found in module path. Please call write_config_files first to create the facets.yaml configuration."
 
         os.makedirs(full_module_path, exist_ok=True)
 
