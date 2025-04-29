@@ -1,7 +1,9 @@
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 import subprocess
+import tempfile
+import yaml
 
 import config
 from config import mcp, working_directory  # Import from config for shared resources
@@ -49,6 +51,73 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
         working_directory
     ]
     return run_ftf_command(command)
+
+@mcp.tool()
+def register_output_type(
+    name: str,
+    properties: Dict[str, Any],
+    providers: List[Dict[str, str]] = None
+) -> str:
+    """
+    Tool to register a new output type in the Facets control plane.
+    
+    This tool creates a temporary YAML file with the output type definition,
+    then calls the ftf register-output-type command to register it.
+    
+    Args:
+    - name (str): The name of the output type in the format '@namespace/name'.
+    - properties (Dict[str, Any]): A dictionary defining the properties of the output type.
+    - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
+    
+    Returns:
+    - str: The output from the FTF command execution or error message if registration fails.
+    """
+    try:
+        # Validate the name format
+        if not name.startswith('@') or '/' not in name:
+            return "Error: Name should be in the format '@namespace/name'."
+        
+        # Prepare the YAML content
+        output_type_def = {
+            "name": name,
+            "properties": properties
+        }
+        
+        # Add providers if specified
+        if providers:
+            providers_dict = {}
+            for provider in providers:
+                if 'name' not in provider:
+                    return "Error: Each provider must have a 'name' field."
+                
+                provider_name = provider['name']
+                providers_dict[provider_name] = {
+                    "source": provider.get('source', ''),
+                    "version": provider.get('version', '')
+                }
+            
+            output_type_def["providers"] = providers_dict
+        
+        # Create a temporary YAML file
+        with tempfile.NamedTemporaryFile(suffix='.yaml', mode='w', delete=False) as temp_file:
+            yaml.dump(output_type_def, temp_file, default_flow_style=False)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Build the command
+            command = ["ftf", "register-output-type", temp_file_path]
+            
+            # Run the command
+            return run_ftf_command(command)
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+    
+    except Exception as e:
+        error_message = f"Error registering output type: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return error_message
 
 @mcp.tool()
 def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> str:

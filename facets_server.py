@@ -6,6 +6,7 @@ from tools.ftf_tools import *
 from tools.module_files import *
 from tools.instructions import *
 from tools.existing_modules import *
+from utils.client_utils import ClientUtils
 from prompts.module_prompt import *
 
 # Say Hi tool
@@ -46,6 +47,12 @@ def init_environment() -> None:
     control_plane_url = os.getenv('CONTROL_PLANE_URL')
     if profile and username and token and control_plane_url:
         _ftf_login(profile, username, token, control_plane_url)
+        # Initialize the Swagger client
+        try:
+            ClientUtils.initialize()
+            print("Swagger client initialized successfully.", file=sys.stderr)
+        except Exception as e:
+            print(f"Error initializing Swagger client: {str(e)}", file=sys.stderr)
     else:
         print("Environment variables not fully set; assuming already logged in.", file=sys.stderr)
 
