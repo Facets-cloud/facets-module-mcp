@@ -9,7 +9,7 @@ dependencies = [
     "mcp[cli]",
     "checkov",
     "questionary",
-    "ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git"
+    "ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git@b24314afbd5e7fc8183a0ca7d28ca4909303f6d5"
 ]
 requires-python = ">=3.10"
 
