@@ -87,9 +87,9 @@ def register_output_type(
         # Validate the name format
         if not name.startswith('@') or '/' not in name:
             return "Error: Name should be in the format '@namespace/name'."
-        
+
         # Split the name into namespace and name parts
-        name_parts = name[1:].split('/', 1)  # Remove @ and split
+        name_parts = name.split('/', 1)
         if len(name_parts) != 2:
             return "Error: Name should be in the format '@namespace/name'."
         
@@ -160,7 +160,7 @@ def register_output_type(
                 
                 diff_message += "\nTo override the existing configuration, please call this function again with override_confirmation=True"
                 return diff_message
-            elif (properties_equal and providers_equal):
+            elif properties_equal and providers_equal:
                 return f"Output type '{name}' already exists with the same configuration. No changes needed."
         
         # Prepare the YAML content
@@ -306,7 +306,6 @@ def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, pu
         if result.returncode == 0 and result.stdout.strip():
             git_ref = result.stdout.strip()
             
-        print(f"Using git repo: {git_repo_url}, git ref: {git_ref}", file=sys.stderr)
     except Exception as e:
         print(f"Error extracting git details: {str(e)}. Using defaults.", file=sys.stderr)
     

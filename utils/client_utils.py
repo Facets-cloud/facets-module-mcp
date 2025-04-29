@@ -38,7 +38,7 @@ class ClientUtils:
         Raises:
             ValueError: If profile is not specified or if required credentials are missing.
         """
-        profile = os.getenv("FACETS_PROFILE", "")
+        profile = os.getenv("FACETS_PROFILE", "default")
         cp_url = os.getenv("CONTROL_PLANE_URL", "")
         username = os.getenv("FACETS_USERNAME", "")
         token = os.getenv("FACETS_TOKEN", "")

@@ -9,20 +9,6 @@ from tools.existing_modules import *
 from utils.client_utils import ClientUtils
 from prompts.module_prompt import *
 
-# Say Hi tool
-@mcp.tool()
-def say_hi(name: str) -> str:
-    """
-    Tool to greet users with a welcome message.
-
-    Args:
-    - name (str): The name of the person to greet.
-
-    Returns:
-    - str: A welcome message for the user.
-    """
-    return f"Hi, {name}! Welcome to Facets."
-
 
 # Function to initialize the environment and perform necessary checks
 
@@ -36,25 +22,21 @@ def init_environment() -> None:
     if len(sys.argv) > 2:
         print("Error: Working directory not specified.", file=sys.stderr)
         sys.exit(1)
-    # Ensure 'ftf' is installed
-    # ftf_install_status = ensure_ftf_installed()
-    # print(ftf_install_status)
 
     # Perform login if environment variables are set
-    profile = os.getenv('FACETS_PROFILE')
+    profile = os.getenv('FACETS_PROFILE', "default")
     username = os.getenv('FACETS_USERNAME')
     token = os.getenv('FACETS_TOKEN')
     control_plane_url = os.getenv('CONTROL_PLANE_URL')
     if profile and username and token and control_plane_url:
         _ftf_login(profile, username, token, control_plane_url)
-        # Initialize the Swagger client
-        try:
-            ClientUtils.initialize()
-            print("Swagger client initialized successfully.", file=sys.stderr)
-        except Exception as e:
-            print(f"Error initializing Swagger client: {str(e)}", file=sys.stderr)
     else:
         print("Environment variables not fully set; assuming already logged in.", file=sys.stderr)
+    # Initialize the Swagger client
+    try:
+        ClientUtils.initialize()
+    except Exception as e:
+        print(f"Error initializing Swagger client: {str(e)}", file=sys.stderr)
 
 
 # Private method to perform login using ftf
