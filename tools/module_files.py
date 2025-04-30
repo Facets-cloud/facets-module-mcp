@@ -8,7 +8,7 @@ import yaml
 from typing import Optional, Dict, Any, List
 
 from config import mcp, working_directory
-from tools.ftf_tools import run_ftf_command, register_output_type
+from tools.ftf_tools import run_ftf_command
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
 from swagger_client.rest import ApiException
 from utils.client_utils import ClientUtils
@@ -394,6 +394,90 @@ def _validate_output_types(facets_yaml_content: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error validating output types: {str(e)}", file=sys.stderr)
         return {"error": f"Error validating output types: {str(e)}"}
+
+@mcp.tool()
+def get_output_type_details(output_type: str) -> Dict[str, Any]:
+    """
+    Get details for a specific output type from the Facets control plane.
+    
+    This tool calls the get_output_by_name_using_get API endpoint to retrieve 
+    information about an output type, including its properties and providers.
+    
+    Args:
+        output_type (str): The output type name in format '@namespace/name'
+        
+    Returns:
+        Dict[str, Any]: Dictionary containing the output type details or error information
+    """
+    try:
+        # Validate the name format
+        if not output_type.startswith('@') or '/' not in output_type:
+            return {"error": "Error: Name should be in the format '@namespace/name'."}
+
+        # Split the name into namespace and name parts
+        name_parts = output_type.split('/', 1)
+        if len(name_parts) != 2:
+            return {"error": "Error: Name should be in the format '@namespace/name'."}
+        
+        namespace, output_name = name_parts
+        
+        # Initialize the API client
+        try:
+            api_client = ClientUtils.get_client()
+            output_api = UiTfOutputControllerApi(api_client)
+            
+            # Get output type details
+            output_details = output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
+            
+            # Convert the response object to a dictionary
+            if output_details:
+                details_dict = {}
+                
+                # Add basic info
+                details_dict["name"] = output_type
+                details_dict["exists"] = True
+                
+                # Add properties
+                if hasattr(output_details, 'properties') and output_details.properties:
+                    if hasattr(output_details.properties, 'to_dict'):
+                        details_dict["properties"] = output_details.properties.to_dict()
+                    else:
+                        details_dict["properties"] = output_details.properties
+                
+                # Add providers
+                if hasattr(output_details, 'providers') and output_details.providers:
+                    providers_list = []
+                    for provider in output_details.providers:
+                        provider_dict = {
+                            "name": provider.name,
+                            "source": provider.source,
+                            "version": provider.version
+                        }
+                        providers_list.append(provider_dict)
+                    details_dict["providers"] = providers_list
+                
+                # Add any other relevant fields
+                if hasattr(output_details, 'id'):
+                    details_dict["id"] = output_details.id
+                if hasattr(output_details, 'created_at'):
+                    details_dict["created_at"] = output_details.created_at
+                if hasattr(output_details, 'updated_at'):
+                    details_dict["updated_at"] = output_details.updated_at
+                
+                return details_dict
+            else:
+                return {"error": f"No details found for output type '{output_type}'"}
+            
+        except ApiException as e:
+            if e.status == 404:
+                return {"exists": False, "error": f"Output type '{output_type}' not found"}
+            else:
+                return {"error": f"Error accessing API: {str(e)}"}
+    
+    except Exception as e:
+        error_message = f"Error retrieving output type details: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return {"error": error_message}
 
 @mcp.tool()
 def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
