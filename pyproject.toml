@@ -10,7 +10,7 @@ dependencies = [
     "checkov",
     "questionary",
     "ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git@d4daa586336933834613166440626d470ed48d00",
-    "swagger_client @ git+https://github.com/Facets-cloud/control-plane-python-sdk.git@f15fe8236a7669340a7152487f2d5adbf145a41d"
+    "swagger_client @ git+https://github.com/Facets-cloud/control-plane-python-sdk.git@8bcd4eefcc2c0916cd17c6cd2cd7f7e11ef8530f"
 ]
 requires-python = ">=3.10"
 

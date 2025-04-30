@@ -480,6 +480,66 @@ def get_output_type_details(output_type: str) -> Dict[str, Any]:
         return {"error": error_message}
 
 @mcp.tool()
+def get_inputs_by_provider_source(provider_source: str) -> str:
+    """
+    Get inputs for input param provider source by calling the API method get_outputs_by_provider_source_using_get.
+    This tool retrieves all outputs that use a specific provider source which can be used as inputs for
+    module configurations.
+    
+    Args:
+        provider_source (str): The provider source name to search for.
+        
+    Returns:
+        str: JSON string containing the formatted output information.
+    """
+    try:
+        # Initialize API client
+        api_client = ClientUtils.get_client()
+        output_api = UiTfOutputControllerApi(api_client)
+        
+        # Call the API method to get outputs by provider source
+        response = output_api.get_outputs_by_provider_source_using_get(source=provider_source)
+        
+        if not response:
+            return json.dumps({"status": "success", "message": "No outputs found for the specified provider source.", "outputs": []})
+        
+        # Format the response
+        formatted_outputs = []
+        for output in response:
+            output_data = {
+                "name": f"{output.namespace}/{output.name}"
+            }
+            
+            # Add properties if available
+            if hasattr(output, 'properties') and output.properties:
+                # Convert properties to dictionary if it has to_dict method
+                if hasattr(output.properties, 'to_dict'):
+                    output_data["properties"] = output.properties.to_dict()
+                else:
+                    output_data["properties"] = output.properties
+            
+            # Add providers information
+            if hasattr(output, 'providers') and output.providers:
+                providers_list = []
+                for provider in output.providers:
+                    provider_dict = {
+                        "name": provider.name,
+                        "source": provider.source,
+                        "version": provider.version
+                    }
+                    providers_list.append(provider_dict)
+                output_data["providers"] = providers_list
+            
+            formatted_outputs.append(output_data)
+        
+        return json.dumps({"status": "success", "count": len(formatted_outputs), "outputs": formatted_outputs}, indent=2)
+    
+    except Exception as e:
+        error_message = f"Error retrieving outputs by provider source: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return json.dumps({"status": "error", "message": error_message})
+
+
 def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
     """
     Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
