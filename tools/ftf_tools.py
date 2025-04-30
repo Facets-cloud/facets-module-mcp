@@ -1,13 +1,23 @@
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 import subprocess
+import tempfile
+import yaml
+import json
 
 import config
 from config import mcp, working_directory  # Import from config for shared resources
 
 from click.testing import CliRunner
 from ftf_cli.cli import cli
+
+# Import Swagger client components
+from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+from swagger_client.rest import ApiException
+from swagger_client.configuration import Configuration
+from swagger_client.api_client import ApiClient
+from utils.client_utils import ClientUtils
 
 
 @mcp.tool()
@@ -49,6 +59,157 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
         working_directory
     ]
     return run_ftf_command(command)
+
+@mcp.tool()
+def register_output_type(
+    name: str,
+    properties: Dict[str, Any],
+    providers: List[Dict[str, str]] = None,
+    override_confirmation: bool = False
+) -> str:
+    """
+    Tool to register a new output type in the Facets control plane.
+    
+    This tool first checks if the output type already exists:
+    - If it doesn't exist, it proceeds with registration
+    - If it exists, it compares properties and providers to determine if an update is needed
+    
+    Args:
+    - name (str): The name of the output type in the format '@namespace/name'.
+    - properties (Dict[str, Any]): A dictionary defining the properties of the output type.
+    - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
+    - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
+    
+    Returns:
+    - str: The output from the FTF command execution, error message, or request for confirmation.
+    """
+    try:
+        # Validate the name format
+        if not name.startswith('@') or '/' not in name:
+            return "Error: Name should be in the format '@namespace/name'."
+
+        # Split the name into namespace and name parts
+        name_parts = name.split('/', 1)
+        if len(name_parts) != 2:
+            return "Error: Name should be in the format '@namespace/name'."
+        
+        namespace, output_name = name_parts
+        
+        # Initialize the API client
+        api_client = ClientUtils.get_client()
+        output_api = UiTfOutputControllerApi(api_client)
+        
+        # Check if the output already exists
+        output_exists = True
+        existing_output = None
+        try:
+            existing_output = output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
+        except ApiException as e:
+            if e.status == 404:
+                output_exists = False
+            else:
+                return f"Error accessing API: {str(e)}"
+        
+        # If output exists, compare properties and providers
+        if output_exists and existing_output:
+            # Convert existing_output properties to dict for comparison
+            existing_properties = existing_output.properties
+            # We need to ensure proper JSON comparison
+            if hasattr(existing_properties, 'to_dict'):
+                existing_properties = existing_properties.to_dict()
+            
+            # Convert providers to comparable format
+            existing_providers_dict = {}
+            if existing_output.providers:
+                for provider in existing_output.providers:
+                    existing_providers_dict[provider.name] = {
+                        "source": provider.source or "",
+                        "version": provider.version or ""
+                    }
+            
+            # Create new_providers_dict for comparison
+            new_providers_dict = {}
+            if providers:
+                for provider in providers:
+                    if 'name' not in provider:
+                        return "Error: Each provider must have a 'name' field."
+                    
+                    provider_name = provider['name']
+                    new_providers_dict[provider_name] = {
+                        "source": provider.get('source', ''),
+                        "version": provider.get('version', '')
+                    }
+            
+            # Compare properties and providers
+            properties_equal = json.dumps(existing_properties, sort_keys=True) == json.dumps(properties, sort_keys=True)
+            providers_equal = json.dumps(existing_providers_dict, sort_keys=True) == json.dumps(new_providers_dict, sort_keys=True)
+            
+            # If properties or providers are different and no override confirmation, ask for confirmation
+            if (not properties_equal or not providers_equal) and not override_confirmation:
+                diff_message = "The output type already exists with different configuration:\n"
+                
+                if not properties_equal:
+                    diff_message += "\nProperties Difference:\n"
+                    diff_message += f"Existing: {json.dumps(existing_properties, indent=2)}\n"
+                    diff_message += f"New: {json.dumps(properties, indent=2)}\n"
+                
+                if not providers_equal:
+                    diff_message += "\nProviders Difference:\n"
+                    diff_message += f"Existing: {json.dumps(existing_providers_dict, indent=2)}\n"
+                    diff_message += f"New: {json.dumps(new_providers_dict, indent=2)}\n"
+                
+                diff_message += "\nTo override the existing configuration, please call this function again with override_confirmation=True"
+                return diff_message
+            elif properties_equal and providers_equal:
+                return f"Output type '{name}' already exists with the same configuration. No changes needed."
+        
+        # Prepare the YAML content
+        output_type_def = {
+            "name": name,
+            "properties": properties
+        }
+        
+        # Add providers if specified
+        if providers:
+            providers_dict = {}
+            for provider in providers:
+                if 'name' not in provider:
+                    return "Error: Each provider must have a 'name' field."
+                
+                provider_name = provider['name']
+                providers_dict[provider_name] = {
+                    "source": provider.get('source', ''),
+                    "version": provider.get('version', '')
+                }
+            
+            output_type_def["providers"] = providers_dict
+        
+        # Create a temporary YAML file
+        with tempfile.NamedTemporaryFile(suffix='.yaml', mode='w', delete=False) as temp_file:
+            yaml.dump(output_type_def, temp_file, default_flow_style=False)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Build the command
+            command = ["ftf", "register-output-type", temp_file_path]
+            
+            # Run the command
+            result = run_ftf_command(command)
+            
+            # If we're overriding an existing output, add a note to the result
+            if output_exists and override_confirmation:
+                result = f"Successfully overrode existing output type '{name}'.\n\n{result}"
+            
+            return result
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+    
+    except Exception as e:
+        error_message = f"Error registering output type: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return error_message
 
 @mcp.tool()
 def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> str:
@@ -145,7 +306,6 @@ def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, pu
         if result.returncode == 0 and result.stdout.strip():
             git_ref = result.stdout.strip()
             
-        print(f"Using git repo: {git_repo_url}, git ref: {git_ref}", file=sys.stderr)
     except Exception as e:
         print(f"Error extracting git details: {str(e)}. Using defaults.", file=sys.stderr)
     
