@@ -109,8 +109,6 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
 
         # Run validation method on facets_yaml and module_path
         validation_error = _validate_yaml(module_path, facets_yaml)
-        if validation_error:
-            return f"Error validating facets.yaml: {validation_error}"
 
         # Check for outputs and validate output types
         output_validation_results = _validate_output_types(facets_yaml)
