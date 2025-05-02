@@ -2,16 +2,29 @@
 
 import os
 import sys
-import difflib
 import json
-import yaml
 from typing import Optional, Dict, Any, List
 
 from config import mcp, working_directory
-from tools.ftf_tools import run_ftf_command
+from utils.file_utils import (
+    list_files_in_directory, 
+    read_file_content, 
+    generate_file_previews,
+    write_file_safely,
+    ensure_path_in_working_directory
+)
+from utils.yaml_utils import (
+    validate_yaml, 
+    validate_output_types, 
+    check_missing_output_types,
+    read_and_validate_facets_yaml
+)
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
-from swagger_client.rest import ApiException
 from utils.client_utils import ClientUtils
+from utils.output_utils import (
+    get_output_type_details_from_api,
+    get_inputs_by_provider_source_from_api
+)
 
 # Initialize client utility
 try:
@@ -33,17 +46,7 @@ def list_files(module_path: str) -> list:
     Returns:
         list: A list of file paths (strings) found in the module directory.
     """
-    file_list = []
-    full_module_path = os.path.abspath(module_path)
-    if not full_module_path.startswith(os.path.abspath(working_directory)):
-        raise ValueError("Attempt to access files outside of the working directory.")
-    try:
-        for root, dirs, files in os.walk(full_module_path):
-            for file in files:
-                file_list.append(os.path.join(root, file))
-    except OSError as e:
-        print(f"Error accessing module path {module_path}: {e}")
-    return file_list
+    return list_files_in_directory(module_path, working_directory)
 
 
 @mcp.tool()
@@ -58,15 +61,7 @@ def read_file(file_path: str) -> str:
     Returns:
         str: The content of the file.
     """
-    full_file_path = os.path.abspath(file_path)
-    if not full_file_path.startswith(os.path.abspath(working_directory)):
-        raise ValueError("Attempt to access files outside of the working directory.")
-    try:
-        with open(full_file_path, 'r') as f:
-            return f.read()
-    except OSError as e:
-        print(f"Error reading file {file_path}: {e}")
-        return "Error reading file."
+    return read_file_content(file_path, working_directory)
 
 
 @mcp.tool()
@@ -77,15 +72,14 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
 
     Steps for safe variable update:
 
-    1. Always run with `dry_run=True` first  2 this is an irreversible action.
+    1. Always run with `dry_run=True` first. This is an irreversible action.
     2. Parse and display a diff:
-       
 
- Added
-        Modified (old  new)
-        Removed
-    3. Ask user if they want to edit or add variables and wait for his input.
-    4. Only if user **explicitly confirms**, run again with `dry_run=False`.
+       Added
+       Modified (old -> new)
+       Removed
+    3. Ask the user if they want to edit or add variables and wait for his input.
+    4. Only if the user **explicitly confirms**, run again with `dry_run=False`.
     
     Args:
         module_path (str): Path to the module directory.
@@ -108,21 +102,16 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             os.makedirs(full_module_path, exist_ok=True)
 
         # Run validation method on facets_yaml and module_path
-        validation_error = _validate_yaml(module_path, facets_yaml)
+        validation_error = validate_yaml(module_path, facets_yaml)
 
         # Check for outputs and validate output types
-        output_validation_results = _validate_output_types(facets_yaml)
-        if output_validation_results and "missing_outputs" in output_validation_results:
-            missing_outputs = output_validation_results["missing_outputs"]
-            if missing_outputs:
-                missing_types_msg = f"Warning: The following output types do not exist and should be registered first using register_output_type:\n"
-                
-                for output_type in missing_outputs:
-                    missing_types_msg += f"- {output_type}\n"
-                
-                missing_types_msg += "\nPlease register these output types using register_output_type before writing the configuration."
-                
-                return missing_types_msg
+        api_client = ClientUtils.get_client()
+        output_api = UiTfOutputControllerApi(api_client)
+        output_validation_results = validate_output_types(facets_yaml, output_api)
+        
+        has_missing_types, error_message = check_missing_output_types(output_validation_results)
+        if has_missing_types:
+            return error_message
 
         changes = []
         current_facets_content = ""
@@ -159,7 +148,6 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             # Create structured output with JSON
             file_preview = generate_file_previews(facets_yaml, current_facets_content)
             
-            import json
             result = {
                 "type": "dry_run",
                 "module_path": module_path,
@@ -176,67 +164,6 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         error_message = f"Error processing facets.yaml: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
-
-
-def generate_file_previews(facets_yaml: str, current_facets_yaml: Optional[str] = None):
-    """
-    Generate preview or diff of facets.yaml content for dry run mode.
-    
-    Args:
-        facets_yaml: New content for facets.yaml file
-        current_facets_yaml: Current content of facets.yaml file (for diff)
-        
-    Returns:
-        dict: Structured data with file preview or diff information
-    """
-    # If we have current content, generate a diff
-    if current_facets_yaml:
-        return {
-            "type": "diff",
-            "content": generate_diff(current_facets_yaml, facets_yaml)
-        }
-    else:
-        # Show preview of new file
-        content_lines = facets_yaml.splitlines()
-        preview_lines = content_lines[:min(20, len(content_lines))]
-        is_truncated = len(content_lines) > 20
-        
-        return {
-            "type": "new_file",
-            "content": "\n".join(preview_lines),
-            "truncated": is_truncated,
-            "total_lines": len(content_lines)
-        }
-
-
-def generate_diff(current_content: str, new_content: str) -> str:
-    """
-    Generate a unified diff between current and new content.
-    
-    Args:
-        current_content: The current file content
-        new_content: The new file content to be written
-        
-    Returns:
-        str: A formatted diff showing changes
-    """
-    current_lines = current_content.splitlines()
-    new_lines = new_content.splitlines()
-    
-    diff = difflib.unified_diff(
-        current_lines, 
-        new_lines,
-        lineterm='',
-        n=3  # Context lines
-    )
-    
-    # Format the diff for readability
-    diff_text = '\n'.join(list(diff))
-    
-    # If the diff is very long, truncate it
-    diff_lines = diff_text.splitlines()
-    
-    return diff_text
 
 
 @mcp.tool()
@@ -285,113 +212,6 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         print(error_message, file=sys.stderr)
         return error_message
 
-def _validate_yaml(module_path: str, facets_yaml: str) -> str:
-    """
-    Private method to validate facets_yaml content.
-    Writes facets_yaml to facets.yaml.new in module_path for validation, then deletes it.
-    Returns an error message string if validation fails, or empty string if valid.
-    """
-    import os
-
-    temp_path = os.path.join(os.path.abspath(module_path), "facets.yaml.new")
-    try:
-        with open(temp_path, 'w') as temp_file:
-            temp_file.write(facets_yaml)
-    except Exception as e:
-        return f"Error writing temporary validation file: {str(e)}"
-    command = [
-        "ftf", "validate-facets",
-        "--filename", "facets.yaml.new",
-        module_path
-    ]
-
-    validation_error = run_ftf_command(command)
-
-    try:
-        os.remove(temp_path)
-    except Exception:
-        pass
-
-    if validation_error.startswith("Error executing command"):
-        raise RuntimeError(validation_error)
-
-    return validation_error
-
-
-def _validate_output_types(facets_yaml_content: str) -> Dict[str, Any]:
-    """
-    Private method to validate output types in facets.yaml.
-    Checks if output types mentioned in the outputs block exist in the Facets control plane.
-    
-    Args:
-        facets_yaml_content (str): Content of facets.yaml file
-        
-    Returns:
-        Dict[str, Any]: Dictionary with validation results including missing outputs
-    """
-    try:
-        # Parse YAML content
-        facets_data = yaml.safe_load(facets_yaml_content)
-        if not facets_data:
-            return {}
-        
-        # Check if outputs block exists
-        if 'outputs' not in facets_data:
-            return {}
-        
-        outputs = facets_data.get('outputs', {})
-        if not outputs:
-            return {}
-        
-        # Extract output types from outputs block
-        output_types = []
-        for output_name, output_def in outputs.items():
-            if 'type' in output_def:
-                output_type = output_def['type']
-                if output_type not in output_types:
-                    output_types.append(output_type)
-        
-        if not output_types:
-            return {}
-        
-        # Check if output types exist in Facets control plane
-        missing_output_types = []
-        
-        # Initialize API client
-        try:
-            api_client = ClientUtils.get_client()
-            output_api = UiTfOutputControllerApi(api_client)
-            
-            for output_type in output_types:
-                # Skip if not in @namespace/name format
-                if not output_type.startswith('@') or '/' not in output_type:
-                    continue
-                
-                # Split the name into namespace and name parts
-                name_parts = output_type.split('/', 1)
-                if len(name_parts) != 2:
-                    continue
-                
-                namespace, output_name = name_parts
-                
-                # Check if the output exists
-                try:
-                    output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
-                except ApiException as e:
-                    if e.status == 404:
-                        missing_output_types.append(output_type)
-                    else:
-                        print(f"Error checking output type {output_type}: {str(e)}", file=sys.stderr)
-        
-        except Exception as e:
-            print(f"Error initializing API client: {str(e)}", file=sys.stderr)
-            return {"error": f"Error checking output types: {str(e)}"}
-        
-        return {"missing_outputs": missing_output_types}
-    
-    except Exception as e:
-        print(f"Error validating output types: {str(e)}", file=sys.stderr)
-        return {"error": f"Error validating output types: {str(e)}"}
 
 @mcp.tool()
 def get_output_type_details(output_type: str) -> Dict[str, Any]:
@@ -407,75 +227,8 @@ def get_output_type_details(output_type: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary containing the output type details or error information
     """
-    try:
-        # Validate the name format
-        if not output_type.startswith('@') or '/' not in output_type:
-            return {"error": "Error: Name should be in the format '@namespace/name'."}
+    return get_output_type_details_from_api(output_type)
 
-        # Split the name into namespace and name parts
-        name_parts = output_type.split('/', 1)
-        if len(name_parts) != 2:
-            return {"error": "Error: Name should be in the format '@namespace/name'."}
-        
-        namespace, output_name = name_parts
-        
-        # Initialize the API client
-        try:
-            api_client = ClientUtils.get_client()
-            output_api = UiTfOutputControllerApi(api_client)
-            
-            # Get output type details
-            output_details = output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
-            
-            # Convert the response object to a dictionary
-            if output_details:
-                details_dict = {}
-                
-                # Add basic info
-                details_dict["name"] = output_type
-                details_dict["exists"] = True
-                
-                # Add properties
-                if hasattr(output_details, 'properties') and output_details.properties:
-                    if hasattr(output_details.properties, 'to_dict'):
-                        details_dict["properties"] = output_details.properties.to_dict()
-                    else:
-                        details_dict["properties"] = output_details.properties
-                
-                # Add providers
-                if hasattr(output_details, 'providers') and output_details.providers:
-                    providers_list = []
-                    for provider in output_details.providers:
-                        provider_dict = {
-                            "name": provider.name,
-                            "source": provider.source,
-                            "version": provider.version
-                        }
-                        providers_list.append(provider_dict)
-                    details_dict["providers"] = providers_list
-                
-                # Add any other relevant fields
-                if hasattr(output_details, 'id'):
-                    details_dict["id"] = output_details.id
-                if hasattr(output_details, 'created_at'):
-                    details_dict["created_at"] = output_details.created_at
-                if hasattr(output_details, 'updated_at'):
-                    details_dict["updated_at"] = output_details.updated_at
-                
-                return details_dict
-            else:
-                return {"error": f"No details found for output type '{output_type}'"}
-            
-        except ApiException as e:
-            if e.status == 404:
-                return {"exists": False, "error": f"Output type '{output_type}' not found"}
-            else:
-                return {"error": f"Error accessing API: {str(e)}"}
-    
-    except Exception as e:
-        error_message = f"Error retrieving output type details: {str(e)}"
-        print(error_message, file=sys.stderr)
-        return {"error": error_message}
 
 @mcp.tool()
 def get_inputs_by_provider_source(provider_source: str) -> str:
@@ -490,54 +243,10 @@ def get_inputs_by_provider_source(provider_source: str) -> str:
     Returns:
         str: JSON string containing the formatted output information.
     """
-    try:
-        # Initialize API client
-        api_client = ClientUtils.get_client()
-        output_api = UiTfOutputControllerApi(api_client)
-        
-        # Call the API method to get outputs by provider source
-        response = output_api.get_outputs_by_provider_source_using_get(source=provider_source)
-        
-        if not response:
-            return json.dumps({"status": "success", "message": "No outputs found for the specified provider source.", "outputs": []})
-        
-        # Format the response
-        formatted_outputs = []
-        for output in response:
-            output_data = {
-                "name": f"{output.namespace}/{output.name}"
-            }
-            
-            # Add properties if available
-            if hasattr(output, 'properties') and output.properties:
-                # Convert properties to dictionary if it has to_dict method
-                if hasattr(output.properties, 'to_dict'):
-                    output_data["properties"] = output.properties.to_dict()
-                else:
-                    output_data["properties"] = output.properties
-            
-            # Add providers information
-            if hasattr(output, 'providers') and output.providers:
-                providers_list = []
-                for provider in output.providers:
-                    provider_dict = {
-                        "name": provider.name,
-                        "source": provider.source,
-                        "version": provider.version
-                    }
-                    providers_list.append(provider_dict)
-                output_data["providers"] = providers_list
-            
-            formatted_outputs.append(output_data)
-        
-        return json.dumps({"status": "success", "count": len(formatted_outputs), "outputs": formatted_outputs}, indent=2)
-    
-    except Exception as e:
-        error_message = f"Error retrieving outputs by provider source: {str(e)}"
-        print(error_message, file=sys.stderr)
-        return json.dumps({"status": "error", "message": error_message})
+    return get_inputs_by_provider_source_from_api(provider_source)
 
 
+@mcp.tool()
 def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
     """
     Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
@@ -554,16 +263,16 @@ def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces
         str: Success or error message.
     """
     try:
-        full_module_path = os.path.abspath(module_path)
-        if not full_module_path.startswith(os.path.abspath(working_directory)):
-            return "Error: Attempt to write files outside of the working directory."
-
-        # Check if facets.yaml exists in the module path
-        facets_path = os.path.join(full_module_path, "facets.yaml")
-        if not os.path.exists(facets_path):
-            return "Error: facets.yaml not found in module path. Please call write_config_files first to create the facets.yaml configuration."
-
-        os.makedirs(full_module_path, exist_ok=True)
+        full_module_path = ensure_path_in_working_directory(module_path, working_directory)
+        
+        # Initialize API client for validation
+        api_client = ClientUtils.get_client()
+        output_api = UiTfOutputControllerApi(api_client)
+        
+        # Read and validate facets.yaml
+        success, facets_yaml_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
+        if not success:
+            return error_message
 
         # Generate outputs.tf content with local block
         content_lines = ["local {"]
@@ -590,5 +299,3 @@ def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces
         error_message = f"Error writing outputs.tf: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
-
-

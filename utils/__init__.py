@@ -1,3 +1,1 @@
-from .client_utils import ClientUtils
-
-__all__ = ['ClientUtils']
+# Utils package for facets-module-mcp

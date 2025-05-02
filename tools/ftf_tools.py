@@ -1,23 +1,18 @@
 import sys
 from typing import Dict, Any, List
 import os
-import subprocess
+import json
 import tempfile
 import yaml
-import json
 
-import config
 from config import mcp, working_directory  # Import from config for shared resources
-
-from click.testing import CliRunner
-from ftf_cli.cli import cli
+from utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
+from utils.output_utils import prepare_output_type_registration, compare_output_types
+from utils.client_utils import ClientUtils
 
 # Import Swagger client components
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
 from swagger_client.rest import ApiException
-from swagger_client.configuration import Configuration
-from swagger_client.api_client import ApiClient
-from utils.client_utils import ClientUtils
 
 
 @mcp.tool()
@@ -60,6 +55,7 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
     ]
     return run_ftf_command(command)
 
+
 @mcp.tool()
 def register_output_type(
     name: str,
@@ -76,7 +72,7 @@ def register_output_type(
     
     Args:
     - name (str): The name of the output type in the format '@namespace/name'.
-    - properties (Dict[str, Any]): A dictionary defining the properties of the output type.
+    - properties (Dict[str, Any]): A dictionary defining the properties of the output type, as a json schema.
     - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
     - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
     
@@ -112,84 +108,31 @@ def register_output_type(
         
         # If output exists, compare properties and providers
         if output_exists and existing_output:
-            # Convert existing_output properties to dict for comparison
-            existing_properties = existing_output.properties
-            # We need to ensure proper JSON comparison
-            if hasattr(existing_properties, 'to_dict'):
-                existing_properties = existing_properties.to_dict()
+            comparison_result = compare_output_types(existing_output, properties, providers)
             
-            # Convert providers to comparable format
-            existing_providers_dict = {}
-            if existing_output.providers:
-                for provider in existing_output.providers:
-                    existing_providers_dict[provider.name] = {
-                        "source": provider.source or "",
-                        "version": provider.version or ""
-                    }
-            
-            # Create new_providers_dict for comparison
-            new_providers_dict = {}
-            if providers:
-                for provider in providers:
-                    if 'name' not in provider:
-                        return "Error: Each provider must have a 'name' field."
-                    
-                    provider_name = provider['name']
-                    new_providers_dict[provider_name] = {
-                        "source": provider.get('source', ''),
-                        "version": provider.get('version', '')
-                    }
-            
-            # Compare properties and providers
-            properties_equal = json.dumps(existing_properties, sort_keys=True) == json.dumps(properties, sort_keys=True)
-            providers_equal = json.dumps(existing_providers_dict, sort_keys=True) == json.dumps(new_providers_dict, sort_keys=True)
-            
+            if "error" in comparison_result:
+                return comparison_result["error"]
+                
             # If properties or providers are different and no override confirmation, ask for confirmation
-            if (not properties_equal or not providers_equal) and not override_confirmation:
+            if not comparison_result["all_equal"] and not override_confirmation:
                 diff_message = "The output type already exists with different configuration:\n"
-                
-                if not properties_equal:
-                    diff_message += "\nProperties Difference:\n"
-                    diff_message += f"Existing: {json.dumps(existing_properties, indent=2)}\n"
-                    diff_message += f"New: {json.dumps(properties, indent=2)}\n"
-                
-                if not providers_equal:
-                    diff_message += "\nProviders Difference:\n"
-                    diff_message += f"Existing: {json.dumps(existing_providers_dict, indent=2)}\n"
-                    diff_message += f"New: {json.dumps(new_providers_dict, indent=2)}\n"
-                
+                diff_message += comparison_result["diff_message"]
                 diff_message += "\nTo override the existing configuration, please call this function again with override_confirmation=True"
                 return diff_message
-            elif properties_equal and providers_equal:
+            elif comparison_result["all_equal"]:
                 return f"Output type '{name}' already exists with the same configuration. No changes needed."
         
-        # Prepare the YAML content
-        output_type_def = {
-            "name": name,
-            "properties": properties
-        }
-        
-        # Add providers if specified
-        if providers:
-            providers_dict = {}
-            for provider in providers:
-                if 'name' not in provider:
-                    return "Error: Each provider must have a 'name' field."
-                
-                provider_name = provider['name']
-                providers_dict[provider_name] = {
-                    "source": provider.get('source', ''),
-                    "version": provider.get('version', '')
-                }
+        # Prepare the output type data
+        prepared_data = prepare_output_type_registration(name, properties, providers)
+        if "error" in prepared_data:
+            return prepared_data["error"]
             
-            output_type_def["providers"] = providers_dict
+        output_type_def = prepared_data["data"]
         
         # Create a temporary YAML file
-        with tempfile.NamedTemporaryFile(suffix='.yaml', mode='w', delete=False) as temp_file:
-            yaml.dump(output_type_def, temp_file, default_flow_style=False)
-            temp_file_path = temp_file.name
-        
         try:
+            temp_file_path = create_temp_yaml_file(output_type_def)
+            
             # Build the command
             command = ["ftf", "register-output-type", temp_file_path]
             
@@ -203,13 +146,14 @@ def register_output_type(
             return result
         finally:
             # Clean up the temporary file
-            if os.path.exists(temp_file_path):
+            if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
     
     except Exception as e:
         error_message = f"Error registering output type: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
+
 
 @mcp.tool()
 def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> str:
@@ -252,23 +196,6 @@ def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> st
         return error_message
 
 
-def run_ftf_command(command) -> str:
-    if not command[0] == 'ftf':
-        return "Error: Only 'ftf' commands are allowed."
-
-    runner = CliRunner()
-
-    # Remove starting 'ftf' from command to align with Click command structure
-    result = runner.invoke(cli, command[1:])
-
-    if result.exit_code != 0:
-        error_message = f"Error executing command: {result.output}"
-        print(error_message, file=sys.stderr)
-        return error_message
-
-    output_message = result.output
-    return output_message
-
 @mcp.tool()
 def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
     """
@@ -283,31 +210,10 @@ def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, pu
     Returns:
     - str: The output from the FTF command execution.
     """
-    # Get git repository URL from .git/config
-    git_repo_url = "temp"  # Default fallback value
-    git_ref = "ai"        # Default fallback value
-    
-    try:
-        # Extract remote URL from git config
-        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], 
-                               cwd=working_directory,
-                               capture_output=True, 
-                               text=True, 
-                               check=False)
-        if result.returncode == 0 and result.stdout.strip():
-            git_repo_url = result.stdout.strip()
-        
-        # Extract current branch name
-        result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                               cwd=working_directory,
-                               capture_output=True,
-                               text=True,
-                               check=False)
-        if result.returncode == 0 and result.stdout.strip():
-            git_ref = result.stdout.strip()
-            
-    except Exception as e:
-        print(f"Error extracting git details: {str(e)}. Using defaults.", file=sys.stderr)
+    # Get git repository details
+    git_info = get_git_repo_info(working_directory)
+    git_repo_url = git_info["url"]
+    git_ref = git_info["ref"]
     
     command = [
         "ftf", "preview-module",
