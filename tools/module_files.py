@@ -171,7 +171,7 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
     """
     Writes a Terraform resource file (main.tf, variables.tf, etc.) to a module directory.
     
-    Does NOT allow writing outputs.tf here. To update outputs.tf, use write_outputs().
+    Does NOT allow writing output(s).tf here. To update outputs.tf, use write_outputs().
 
     Args:
         module_path (str): Path to the module directory.
@@ -182,7 +182,7 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         str: Success message or error message.
     """
     try:
-        if file_name == "outputs.tf":
+        if file_name == "outputs.tf" or file_name == "output.tf":
             return ("Error: Writing 'outputs.tf' is not allowed through this function. "
                     "Please use the write_outputs() tool instead.")
 
