@@ -72,7 +72,7 @@ def register_output_type(
     
     Args:
     - name (str): The name of the output type in the format '@namespace/name'.
-    - properties (Dict[str, Any]): A dictionary defining the properties of the output type.
+    - properties (Dict[str, Any]): A dictionary defining the properties of the output type, as a json schema.
     - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
     - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
     
