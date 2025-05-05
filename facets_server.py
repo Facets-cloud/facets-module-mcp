@@ -8,6 +8,7 @@ from tools.instructions import *
 from tools.existing_modules import *
 from utils.client_utils import ClientUtils
 from prompts.module_prompt import *
+from tools.deploy_module import *
 
 
 # Function to initialize the environment and perform necessary checks
