@@ -19,7 +19,7 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
     Deploy a specific module to a test project.
     
     This tool checks if the project exists, verifies if it supports preview modules,
-    and then deploys the module to the project's running cluster.
+    and then deploys the module to the project's running environment.
     
     Args:
         project_name (str): The name of the test project (stack) to deploy to
@@ -85,7 +85,7 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
         except ApiException as e:
             return json.dumps({
                 "success": False, 
-                "error": f"Error getting cluster information for '{project_name}': {str(e)}"
+                "error": f"Error getting environment information for '{project_name}': {str(e)}"
             }, indent=2)
             
         # Step 3: Get all resources for the cluster
@@ -122,7 +122,7 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
         except ApiException as e:
             return json.dumps({
                 "success": False, 
-                "error": f"Error retrieving resources for cluster '{cluster_id}': {str(e)}"
+                "error": f"Error retrieving resources for environment '{cluster_id}': {str(e)}"
             }, indent=2)
             
         # Step 4: Deploy the module by triggering hotfix deployment
@@ -177,7 +177,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
     Check the status of a deployment.
 
     Args:
-        cluster_id (str): The ID of the cluster where the deployment is running
+        cluster_id (str): The ID of the environment where the deployment is running
         deployment_id (str): The ID of the deployment to check
         wait (bool): If True, wait for the deployment to complete (either succeed or fail)
         timeout_seconds (int): Maximum time to wait for completion in seconds (default: 300s / 5min)
@@ -291,7 +291,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
     Get logs for a specific deployment.
 
     Args:
-        cluster_id (str): The ID of the cluster where the deployment is running
+        cluster_id (str): The ID of the environment where the deployment is running
         deployment_id (str): The ID of the deployment to get logs for
 
     Returns:
