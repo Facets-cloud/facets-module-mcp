@@ -299,3 +299,35 @@ def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces
         error_message = f"Error writing outputs.tf: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
+
+@mcp.tool()
+def write_readme_file(module_path: str, content: str) -> str:
+    """
+    Writes a README.md file for the module directory.
+    This tool is intended for AI to generate the README content for the module.
+
+    Args:
+        module_path (str): Path to the module directory.
+        content (str): Content to write to README.md.
+
+    Returns:
+        str: Success message or error message.
+    """
+    try:
+        full_module_path = os.path.abspath(module_path)
+        if not full_module_path.startswith(os.path.abspath(working_directory)):
+            return "Error: Attempt to write files outside of the working directory."
+
+        # Create module directory if it doesn't exist
+        os.makedirs(full_module_path, exist_ok=True)
+
+        readme_path = os.path.join(full_module_path, "README.md")
+
+        with open(readme_path, 'w') as f:
+            f.write(content)
+
+        return f"Successfully wrote README.md to {readme_path}"
+    except Exception as e:
+        error_message = f"Error writing README.md file: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return error_message
