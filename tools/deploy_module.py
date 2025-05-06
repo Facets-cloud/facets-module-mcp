@@ -45,7 +45,7 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False, 
-                    "error": f"Project '{project_name}' does not allow preview modules. Enable this feature in the project settings."
+                    "error": f"Project '{project_name}' does not allow preview modules. Enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
                 
         except ApiException as e:
@@ -202,7 +202,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 deployment_id=deployment_id
             )
 
-            if not wait or (deployment.status != "IN_PROGRESS" and deployment.status != "REQUESTED"):
+            if not wait or (deployment.status != "IN_PROGRESS" and deployment.status != "STARTED"):
                 # Return immediately if not waiting or if already complete
                 return json.dumps({
                     "success": True,
@@ -220,7 +220,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
             # If we're waiting, poll until completion or timeout
             while (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "REQUESTED") and elapsed_time < timeout_seconds:
+                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED") and elapsed_time < timeout_seconds:
                 # Sleep for poll interval
                 time.sleep(poll_interval_seconds)
 
@@ -242,7 +242,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
             # Check if we timed out
             if elapsed_time >= timeout_seconds and (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "REQUESTED"):
+                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED"):
                 return json.dumps({
                     "success": False,
                     "status": deployment.status,
