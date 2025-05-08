@@ -29,16 +29,16 @@ def list_test_projects() -> str:
 def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> str:
     """
     Deploy a specific module to a test project.
-    
+
     This tool checks if the project exists, verifies if it supports preview modules,
     and then deploys the module to the project's running environment.
-    
+
     Args:
         project_name (str): The name of the test project (stack) to deploy to
         intent (str): The intent of the module to deploy
         flavor (str): The flavor of the module to deploy
         version (str): The version of the module to deploy
-        
+
     Returns:
         str: Result of the deployment operation as a JSON string
     """
@@ -112,8 +112,8 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
                     if hasattr(resource, 'info') and resource.info:
                         info = resource.info
                         if (
-                            info.flavour == flavor and
-                            info.version == version and not info.disabled):
+                                info.flavour == flavor and
+                                info.version == version and not info.disabled):
                             matching_resources.append(resource)
 
             if not matching_resources:
@@ -121,15 +121,6 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
                     "success": False,
                     "error": f"No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
                 }, indent=2)
-
-            if len(matching_resources) > 1:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Multiple matching resources found. Please specify a more unique combination of intent, flavor, and version."
-                }, indent=2)
-
-            # Get the selected resource
-            selected_resource = matching_resources[0]
 
         except ApiException as e:
             return json.dumps({
@@ -139,14 +130,17 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
 
         # Step 4: Deploy the module by triggering hotfix deployment
         try:
-            # Create facets resource
-            facets_resource = FacetsResource()
-            facets_resource.resource_name = selected_resource.resource_name
-            facets_resource.resource_type = selected_resource.resource_type
+            # Create facets resources for all matching resources
+            facets_resources = []
+            for selected_resource in matching_resources:
+                facets_resource = FacetsResource()
+                facets_resource.resource_name = selected_resource.resource_name
+                facets_resource.resource_type = selected_resource.resource_type
+                facets_resources.append(facets_resource)
 
-            # Create hotfix deployment recipe
+            # Create hotfix deployment recipe with all resources
             recipe = HotfixDeploymentRecipe()
-            recipe.resource_list = [facets_resource]
+            recipe.resource_list = facets_resources
 
             # Call hotfix deployment API
             result = deployment_api.run_hotfix_deployment_recipe_using_post(
@@ -161,9 +155,14 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
             deployment_id = result.id if hasattr(result, 'id') else None
             initial_status = result.status if hasattr(result, 'status') else None
 
+            # Creating resource_names for display in the success message
+            resource_names = [r.resource_name for r in matching_resources]
+
             return json.dumps({
                 "success": True,
-                "message": f"Successfully triggered deployment of module '{intent}/{flavor}/{version}' to environment '{cluster_name}' in project '{project_name}'.",
+                "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
+                "resources_deployed": len(matching_resources),
+                "resource_names": resource_names,
                 "deployment_id": deployment_id,
                 "status": initial_status,
                 "cluster_id": cluster_id,
@@ -173,7 +172,7 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "error": f"Error deploying module '{intent}/{flavor}/{version}' to environment '{cluster_name}': {str(e)}"
+                "error": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}': {str(e)}"
             }, indent=2)
 
     except Exception as e:
