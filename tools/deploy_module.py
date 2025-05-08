@@ -12,6 +12,18 @@ from swagger_client.rest import ApiException
 from config import mcp
 from utils.client_utils import ClientUtils
 
+@mcp.tool()
+def list_test_projects() -> str:
+    """
+    Retrieve and return the names of all available test projects for the user to choose from.
+
+    Returns:
+        str: List of all test projects
+    """
+    api_instance = UiStackControllerApi(ClientUtils.get_client())
+    stacks = api_instance.get_stacks_using_get1()
+    stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
+    return stack_names if stack_names else "No projects found"
 
 @mcp.tool()
 def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> str:
