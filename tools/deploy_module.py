@@ -36,115 +36,115 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
         stack_api = UiStackControllerApi(api_client)
         dropdowns_api = UiDropdownsControllerApi(api_client)
         deployment_api = UiDeploymentControllerApi(api_client)
-        
+
         # Step 1: Check if the project (stack) exists and supports preview modules
         try:
             stack_info = stack_api.get_stack_using_get(stack_name=project_name)
-            
+
             # Check if allowPreviewModules is enabled
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"Project '{project_name}' does not allow preview modules. Enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
-                
+
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"Project '{project_name}' does not exist."
                 }, indent=2)
             else:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"Error accessing project '{project_name}': {str(e)}"
                 }, indent=2)
-                
+
         # Step 2: Get the running environments (clusters) of the project
         try:
             clusters = stack_api.get_clusters_overview_using_get(stack_name=project_name)
             running_clusters = [c for c in clusters if c.cluster_state == "RUNNING"]
-            
+
             if not running_clusters:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"No running environments found in project '{project_name}'. Launch an environment first."
                 }, indent=2)
-                
+
             if len(running_clusters) > 1:
-                cluster_names = [c.name for c in running_clusters]
+                cluster_names = [c.cluster.name for c in running_clusters]
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
                 }, indent=2)
-                
+
             # Get the cluster ID of the single running cluster
-            cluster_id = running_clusters[0].id
-            cluster_name = running_clusters[0].name
-            
+            cluster_id = running_clusters[0].cluster.id
+            cluster_name = running_clusters[0].cluster.name
+
         except ApiException as e:
             return json.dumps({
-                "success": False, 
+                "success": False,
                 "error": f"Error getting environment information for '{project_name}': {str(e)}"
             }, indent=2)
-            
+
         # Step 3: Get all resources for the cluster
         try:
             resources = dropdowns_api.get_all_resources_by_cluster_using_get(cluster_id=cluster_id)
-            
+
             # Filter resources by the specified intent (resourceType)
             matching_resources = []
             for resource in resources:
-                if resource.resource_type == intent and not resource.disabled:
+                if resource.resource_type == intent:
                     # Check if the resource has "info" field with matching flavor and version
                     if hasattr(resource, 'info') and resource.info:
                         info = resource.info
-                        if (isinstance(info, dict) and 
-                            info.get('flavor') == flavor and 
-                            info.get('version') == version):
+                        if (
+                            info.flavour == flavor and
+                            info.version == version and not info.disabled):
                             matching_resources.append(resource)
-            
+
             if not matching_resources:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
                 }, indent=2)
-                
+
             if len(matching_resources) > 1:
                 return json.dumps({
-                    "success": False, 
+                    "success": False,
                     "error": f"Multiple matching resources found. Please specify a more unique combination of intent, flavor, and version."
                 }, indent=2)
-                
+
             # Get the selected resource
             selected_resource = matching_resources[0]
-            
+
         except ApiException as e:
             return json.dumps({
-                "success": False, 
+                "success": False,
                 "error": f"Error retrieving resources for environment '{cluster_id}': {str(e)}"
             }, indent=2)
-            
+
         # Step 4: Deploy the module by triggering hotfix deployment
         try:
             # Create facets resource
             facets_resource = FacetsResource()
             facets_resource.resource_name = selected_resource.resource_name
             facets_resource.resource_type = selected_resource.resource_type
-            
+
             # Create hotfix deployment recipe
             recipe = HotfixDeploymentRecipe()
             recipe.resource_list = [facets_resource]
-            
+
             # Call hotfix deployment API
             result = deployment_api.run_hotfix_deployment_recipe_using_post(
-                deployment_recipe=recipe,
+                body=recipe,
                 cluster_id=cluster_id,
                 allow_destroy=False,
                 force_release=True,
                 is_plan=False
             )
-            
+
             # Get the deployment ID from the result
             deployment_id = result.id if hasattr(result, 'id') else None
             initial_status = result.status if hasattr(result, 'status') else None
@@ -157,13 +157,13 @@ def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> 
                 "cluster_id": cluster_id,
                 "check_status_command": f"check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}')"
             }, indent=2)
-            
+
         except ApiException as e:
             return json.dumps({
-                "success": False, 
+                "success": False,
                 "error": f"Error deploying module '{intent}/{flavor}/{version}' to environment '{cluster_name}': {str(e)}"
             }, indent=2)
-            
+
     except Exception as e:
         error_message = f"Error in deploy_module tool: {str(e)}"
         print(error_message, file=sys.stderr)
