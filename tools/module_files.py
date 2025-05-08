@@ -247,54 +247,67 @@ def get_inputs_by_provider_source(provider_source: str) -> str:
 
 
 @mcp.tool()
-def write_outputs(module_path: str, outputs_attributes: dict, outputs_interfaces: dict) -> str:
+def write_outputs(module_path: str, output_attributes: dict = {}, output_interfaces: dict = {}) -> str:
     """
     Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
-    
+
     This function requires facets.yaml to exist in the module path before writing outputs.tf.
     If facets.yaml doesn't exist, it will fail with a message instructing to call write_config_files first.
 
     Args:
         module_path (str): Path to the module directory.
-        outputs_attributes (dict): Map of output attributes.
-        outputs_interfaces (dict): Map of output interfaces.
+        output_attributes (dict): Map of output attributes.
+        output_interfaces (dict): Map of output interfaces.
 
     Returns:
         str: Success or error message.
     """
     try:
         full_module_path = ensure_path_in_working_directory(module_path, working_directory)
-        
+
         # Initialize API client for validation
         api_client = ClientUtils.get_client()
         output_api = UiTfOutputControllerApi(api_client)
-        
+
         # Read and validate facets.yaml
         success, facets_yaml_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
         if not success:
             return error_message
 
-        # Generate outputs.tf content with local block
-        content_lines = ["local {"]
-        if outputs_attributes:
-            content_lines.append("  outputs_attributes = {")
-            for k, v in outputs_attributes.items():
-                content_lines.append(f"    {k} = {json.dumps(v)}")
+        # Helper to render values correctly for Terraform
+        def render_terraform_value(v):
+            if isinstance(v, (int, float, bool)):
+                return str(v).lower() if isinstance(v, bool) else str(v)
+            if isinstance(v, str):
+                return v if '.' in v else json.dumps(v)
+            return json.dumps(v)
+
+        # Build outputs.tf content
+        content_lines = ["locals {"]
+        if output_attributes:
+            content_lines.append("  output_attributes = {")
+            for k, v in output_attributes.items():
+                content_lines.append(f"    {k} = {render_terraform_value(v)}")
             content_lines.append("  }")
-        if outputs_interfaces:
-            content_lines.append("  outputs_interfaces = {")
-            for k, v in outputs_interfaces.items():
-                content_lines.append(f"    {k} = {json.dumps(v)}")
+        if output_interfaces:
+            content_lines.append("  output_interfaces = {")
+            for k, v in output_interfaces.items():
+                content_lines.append(f"    {k} = {render_terraform_value(v)}")
             content_lines.append("  }")
         content_lines.append("}")
 
         content = "\n".join(content_lines)
 
+        # Write to outputs.tf
         file_path = os.path.join(full_module_path, "outputs.tf")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
         with open(file_path, 'w') as f:
             f.write(content)
 
         return f"Successfully wrote outputs.tf to {file_path}"
+
     except Exception as e:
         error_message = f"Error writing outputs.tf: {str(e)}"
         print(error_message, file=sys.stderr)
