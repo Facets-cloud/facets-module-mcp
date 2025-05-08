@@ -23,7 +23,7 @@ def list_test_projects() -> str:
     api_instance = UiStackControllerApi(ClientUtils.get_client())
     stacks = api_instance.get_stacks_using_get1()
     stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
-    return stack_names if stack_names else "No projects found"
+    return stack_names if stack_names else "No test projects found"
 
 @mcp.tool()
 def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> str:
