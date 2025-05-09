@@ -1,6 +1,0 @@
-mcp[cli]
-
-ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git@784e89b716ecdf83fd590c9b1f2d1a4df64c8c2f
-swagger_client @ git+https://github.com/Facets-cloud/control-plane-python-sdk.git@8bcd4eefcc2c0916cd17c6cd2cd7f7e11ef8530f
-questionary
-checkov

@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
 from swagger_client.rest import ApiException
-from utils.client_utils import ClientUtils
+from facets_mcp.utils.client_utils import ClientUtils
 
 
 def get_output_type_details_from_api(output_type: str) -> Dict[str, Any]:

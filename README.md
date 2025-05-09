@@ -18,17 +18,17 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 
 ## Available MCP Tools
 
-| Tool Name                          | Description                                                  |
-|----------------------------------|--------------------------------------------------------------|
-| `list_files`                     | Lists all files in the specified module directory securely within the working directory. |
-| `read_file`                      | Reads the content of a file within the working directory.    |
-| `write_config_files`             | Writes and validates `facets.yaml` configuration files with dry-run and diff previews. |
-| `write_resource_file`            | Writes Terraform resource files (`main.tf`, `outputs.tf`, etc.) safely. |
-| `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation. |
-| `run_ftf_validate_directory`     | Validates a Terraform module directory using FTF CLI standards. |
-| `run_ftf_preview_module`         | Previews a module with git context extracted automatically.  |
-| `get_local_modules`              | Scans and lists all local Terraform modules by searching for `facets.yaml` recursively, including loading outputs.tf content if present. |
-| `search_modules_after_confirmation` | Searches modules by filtering for a string within facets.yaml files, supports pagination, and returns matched modules with details. |
+| Tool Name                                | Description                                                                                                                              |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_files`                             | Lists all files in the specified module directory securely within the working directory.                                                 |
+| `read_file`                              | Reads the content of a file within the working directory.                                                                                |
+| `write_config_files`                     | Writes and validates `facets.yaml` configuration files with dry-run and diff previews.                                                   |
+| `write_resource_file`                    | Writes Terraform resource files (`main.tf`, `outputs.tf`, etc.) safely.                                                                  |
+| `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation.                                                    |
+| `run_ftf_validate_directory`             | Validates a Terraform module directory using FTF CLI standards.                                                                          |
+| `run_ftf_preview_module`                 | Previews a module with git context extracted automatically.                                                                              |
+| `get_local_modules`                      | Scans and lists all local Terraform modules by searching for `facets.yaml` recursively, including loading outputs.tf content if present. |
+| `search_modules_after_confirmation`      | Searches modules by filtering for a string within facets.yaml files, supports pagination, and returns matched modules with details.      |
 
 ## Prerequisites
 

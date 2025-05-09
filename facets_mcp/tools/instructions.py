@@ -1,6 +1,6 @@
 import os
 import json
-from config import mcp, working_directory
+from facets_mcp.config import mcp, working_directory
 
 
 @mcp.resource(uri="resource://facets_modules_knowledge", name="Facets Knowledge Base")
