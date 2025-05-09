@@ -51,7 +51,7 @@ Add the following to your `claude_desktop_config.json`:
     "facets-module": {
       "command": "uvx",
       "args": [
-        "facets-module-mcpy@<VERSION>",
+        "facets-module-mcp@<VERSION>",
         "/Path/to/working-directory"  # This should be the directory where your Terraform modules are checked out or a subdirectory containing the modules you want to work with
       ],
       "env": {
