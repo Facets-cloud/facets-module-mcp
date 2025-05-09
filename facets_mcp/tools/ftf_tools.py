@@ -1,14 +1,11 @@
 import sys
 from typing import Dict, Any, List
 import os
-import json
-import tempfile
-import yaml
 
-from config import mcp, working_directory  # Import from config for shared resources
-from utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
-from utils.output_utils import prepare_output_type_registration, compare_output_types
-from utils.client_utils import ClientUtils
+from facets_mcp.config import mcp, working_directory  # Import from config for shared resources
+from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
+from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types
+from facets_mcp.utils.client_utils import ClientUtils
 
 # Import Swagger client components
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi

@@ -1,22 +1,56 @@
 [project]
-name = "facets-mcp-server"
-version = "0.1.0"
-description = "MCP server for Facets"
+urls = { "Homepage" = "https://github.com/Facets-cloud/facets-module-mcp", "Bug Tracker" = "https://github.com/Facets-cloud/facets-module-mcp/issues", "Documentation" = "https://github.com/Facets-cloud/facets-module-mcp#readme" }
+
+name = "facets-module-mcp"
+description = "Facets Module MCP"
+dynamic = ["version"]
+readme = "README.md"
+license = {text = "MIT"}
 authors = [
-    { name = "Anshul Sao", email = "anshul@example.com" }
+    { name = "Anshul Sao", email = "anshul@facets.cloud" },
+    { name = "Anuj Hydrabadi", email = "anujhydrabadi@facets.cloud" },
+    { name = "Sanmesh Kakade", email = "sanmesh.kakade@facets.cloud" },
 ]
 dependencies = [
     "mcp[cli]",
     "checkov",
     "questionary",
-    "ftf-cli @ git+https://github.com/Facets-cloud/module-development-cli.git@784e89b716ecdf83fd590c9b1f2d1a4df64c8c2f",
-    "swagger_client @ git+https://github.com/Facets-cloud/control-plane-python-sdk.git@8bcd4eefcc2c0916cd17c6cd2cd7f7e11ef8530f"
+    "ftf-cli",
+    "facets-control-plane-sdk",
 ]
 requires-python = ">=3.10"
+keywords = ["Facets", "MCP", "Terraform", "Python"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Build Tools",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
+]
+[project.scripts]
+facets-module-mcp = "facets_mcp.facets_server:main"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0", "setuptools-scm>=7.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.uv]
-# (optional section for uv settings — no problem keeping this here)
+[tool.setuptools_scm]
+# Write the version to facets_mcp/_version.py
+write_to = "facets_mcp/_version.py"
+version_scheme = "post-release"
+local_scheme = "node-and-date"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["facets_mcp*"]
+
+[tool.setuptools.package-data]
+"facets_mcp" = [
+    "prompts/*.yml",
+    "tools/module_instructions/*.md",
+    "tools/module_instructions/*.tf",
+]

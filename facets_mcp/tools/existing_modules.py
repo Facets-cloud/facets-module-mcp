@@ -4,7 +4,7 @@ import json
 import yaml
 from pathlib import Path
 from typing import Dict, Any
-from config import mcp, working_directory
+from facets_mcp.config import mcp, working_directory
 
 
 def read_facets_file(facets_file):

@@ -9,7 +9,7 @@ import yaml
 from typing import Dict, Any, List, Optional, Tuple
 
 # Import from project modules
-from utils.ftf_command_utils import run_ftf_command
+from facets_mcp.utils.ftf_command_utils import run_ftf_command
 
 
 def validate_yaml(module_path: str, yaml_content: str) -> str:

@@ -5,23 +5,23 @@ import sys
 import json
 from typing import Optional, Dict, Any, List
 
-from config import mcp, working_directory
-from utils.file_utils import (
+from facets_mcp.config import mcp, working_directory
+from facets_mcp.utils.file_utils import (
     list_files_in_directory, 
     read_file_content, 
     generate_file_previews,
     write_file_safely,
     ensure_path_in_working_directory
 )
-from utils.yaml_utils import (
+from facets_mcp.utils.yaml_utils import (
     validate_yaml, 
     validate_output_types, 
     check_missing_output_types,
     read_and_validate_facets_yaml
 )
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
-from utils.client_utils import ClientUtils
-from utils.output_utils import (
+from facets_mcp.utils.client_utils import ClientUtils
+from facets_mcp.utils.output_utils import (
     get_output_type_details_from_api,
     get_inputs_by_provider_source_from_api
 )

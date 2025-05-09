@@ -9,8 +9,8 @@ from swagger_client.models.facets_resource import FacetsResource
 from swagger_client.models.hotfix_deployment_recipe import HotfixDeploymentRecipe
 from swagger_client.rest import ApiException
 
-from config import mcp
-from utils.client_utils import ClientUtils
+from facets_mcp.config import mcp
+from facets_mcp.utils.client_utils import ClientUtils
 
 @mcp.tool()
 def list_test_projects() -> str:

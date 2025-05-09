@@ -1,14 +1,13 @@
 import sys
 import os
-from config import mcp  # Import from config for shared resources
-import config
-from tools.ftf_tools import *
-from tools.module_files import *
-from tools.instructions import *
-from tools.existing_modules import *
-from utils.client_utils import ClientUtils
-from prompts.module_prompt import *
-from tools.deploy_module import *
+from facets_mcp.config import mcp  # Import from config for shared resources
+from facets_mcp.tools.ftf_tools import *
+from facets_mcp.tools.module_files import *
+from facets_mcp.tools.instructions import *
+from facets_mcp.tools.existing_modules import *
+from facets_mcp.utils.client_utils import ClientUtils
+from facets_mcp.prompts.module_prompt import *
+from facets_mcp.tools.deploy_module import *
 
 
 # Function to initialize the environment and perform necessary checks
@@ -20,7 +19,7 @@ def init_environment() -> None:
     This function also performs login if necessary environment variables are set.
     """
     # Ensure working directory is specified
-    if len(sys.argv) > 2:
+    if len(sys.argv) < 2:
         print("Error: Working directory not specified.", file=sys.stderr)
         sys.exit(1)
 
