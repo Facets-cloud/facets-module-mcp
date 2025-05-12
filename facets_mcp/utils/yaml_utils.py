@@ -11,6 +11,9 @@ from typing import Dict, Any, List, Optional, Tuple
 # Import from project modules
 from facets_mcp.utils.ftf_command_utils import run_ftf_command
 
+# Import Swagger client components (used by validate_module_output_types)
+from facets_mcp.utils.client_utils import ClientUtils
+
 
 def validate_yaml(module_path: str, yaml_content: str) -> str:
     """
@@ -234,3 +237,45 @@ def read_and_validate_facets_yaml(module_path: str, output_api=None) -> Tuple[bo
             return False, facets_yaml_content, error_message
             
     return True, facets_yaml_content, ""
+
+
+def validate_module_output_types(module_path: str) -> Tuple[bool, str]:
+    """
+    Validate output types in a module's facets.yaml file.
+    
+    Args:
+        module_path (str): The path to the module directory.
+        
+    Returns:
+        Tuple[bool, str]: (success, validation_message)
+            - success: True if validation passed or was skipped
+            - validation_message: Message describing the validation results
+    """
+    # Check if facets.yaml exists
+    facets_path = os.path.join(module_path, "facets.yaml")
+    if not os.path.exists(facets_path):
+        return True, "Warning: facets.yaml not found. Output type validation skipped."
+    
+    try:
+        # Initialize API client for output type validation
+        api_client = ClientUtils.get_client()
+        from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+        output_api = UiTfOutputControllerApi(api_client)
+        
+        # Read and validate facets.yaml
+        success, facets_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
+        
+        if not success:
+            return False, f"Output type validation failed: {error_message}"
+        
+        # Additional validation to check output types
+        output_validation_results = validate_output_types(facets_content, output_api)
+        has_missing_types, missing_types_error = check_missing_output_types(output_validation_results)
+        
+        if has_missing_types:
+            return False, f"Missing output types detected:\n{missing_types_error}"
+        else:
+            return True, "✓ All output types validation passed successfully."
+            
+    except Exception as e:
+        return True, f"Warning: Output type validation encountered an error: {str(e)}\nThis may be due to API connectivity issues or invalid configuration."
