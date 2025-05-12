@@ -26,19 +26,20 @@ def list_test_projects() -> str:
     return stack_names if stack_names else "No test projects found"
 
 @mcp.tool()
-def deploy_module(project_name: str, intent: str, flavor: str, version: str) -> str:
+def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str) -> str:
     """
-    Deploy a specific module to a test project.
+    Test a module that has been previewed by asking user about project_name where it needs to be tested.
 
+    
     This tool checks if the project exists, verifies if it supports preview modules,
-    and then deploys the module to the project's running environment.
-
+    and then does terraform apply you can check logs for the apply using.
+    
     Args:
         project_name (str): The name of the test project (stack) to deploy to
         intent (str): The intent of the module to deploy
         flavor (str): The flavor of the module to deploy
         version (str): The version of the module to deploy
-
+        
     Returns:
         str: Result of the deployment operation as a JSON string
     """
