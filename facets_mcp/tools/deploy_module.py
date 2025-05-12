@@ -58,19 +58,19 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "error": f"Project '{project_name}' does not allow preview modules. Enable this feature in the project settings by marking it as a Test Project."
+                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "error": f"Project '{project_name}' does not exist."
+                    "instructions": f"Inform User: Project '{project_name}' does not exist."
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
-                    "error": f"Error accessing project '{project_name}': {str(e)}"
+                    "instructions": f"Inform User: Error accessing project '{project_name}': {str(e)}"
                 }, indent=2)
 
         # Step 2: Get the running environments (clusters) of the project
@@ -81,14 +81,14 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not running_clusters:
                 return json.dumps({
                     "success": False,
-                    "error": f"No running environments found in project '{project_name}'. Launch an environment first."
+                    "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first."
                 }, indent=2)
 
             if len(running_clusters) > 1:
                 cluster_names = [c.cluster.name for c in running_clusters]
                 return json.dumps({
                     "success": False,
-                    "error": f"Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
+                    "instructions": f"Inform User:  Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
                 }, indent=2)
 
             # Get the cluster ID of the single running cluster
@@ -98,7 +98,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "error": f"Error getting environment information for '{project_name}': {str(e)}"
+                "instructions": f"Inform User: Error getting environment information for '{project_name}': {str(e)}"
             }, indent=2)
 
         # Step 3: Get all resources for the cluster
@@ -120,13 +120,13 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not matching_resources:
                 return json.dumps({
                     "success": False,
-                    "error": f"No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
+                    "instructions": f"Inform User: No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
                 }, indent=2)
 
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "error": f"Error retrieving resources for environment '{cluster_id}': {str(e)}"
+                "instructions": f"Inform User: Error retrieving resources for environment '{cluster_id}': {str(e)}"
             }, indent=2)
 
         # Step 4: Deploy the module by triggering hotfix deployment
@@ -173,13 +173,13 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "error": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}': {str(e)}"
+                "instructions": f"Inform User: Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}': {str(e)}"
             }, indent=2)
 
     except Exception as e:
         error_message = f"Error in deploy_module tool: {str(e)}"
         print(error_message, file=sys.stderr)
-        return json.dumps({"success": False, "error": error_message}, indent=2)
+        return json.dumps({"success": False, "instructions:": error_message}, indent=2)
 
 
 @mcp.tool()
@@ -364,74 +364,5 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
     except Exception as e:
         error_message = f"Error in get_deployment_logs tool: {str(e)}"
-        print(error_message, file=sys.stderr)
-        return json.dumps({"success": False, "error": error_message}, indent=2)
-
-
-@mcp.tool()
-def deploy_and_wait(project_name: str, intent: str, flavor: str, version: str, timeout_seconds: int = 300) -> str:
-    """
-    Deploy a module and wait for the deployment to complete.
-
-    This tool combines the deploy_module and check_deployment_status tools to provide
-    a convenient one-step deployment with status tracking.
-
-    Args:
-        project_name (str): The name of the test project (stack) to deploy to
-        intent (str): The intent of the module to deploy
-        flavor (str): The flavor of the module
-        version (str): The version of the module
-        timeout_seconds (int): Maximum time to wait for completion in seconds (default: 300s / 5min)
-
-    Returns:
-        str: JSON with deployment result
-    """
-    try:
-        # First, deploy the module
-        deploy_result = json.loads(deploy_module(project_name, intent, flavor, version))
-
-        if not deploy_result.get("success", False):
-            # Deployment initiation failed, return error
-            return json.dumps(deploy_result, indent=2)
-
-        # Get deployment ID and cluster ID
-        deployment_id = deploy_result.get("deployment_id")
-        cluster_id = deploy_result.get("cluster_id")
-
-        if not deployment_id or not cluster_id:
-            return json.dumps({
-                "success": False,
-                "error": "Missing deployment_id or cluster_id in deployment result",
-                "deploy_result": deploy_result
-            }, indent=2)
-
-        # Now wait for deployment to complete
-        status_result = check_deployment_status(
-            cluster_id=cluster_id,
-            deployment_id=deployment_id,
-            wait=True,
-            timeout_seconds=timeout_seconds
-        )
-
-        # Parse status result
-        status_data = json.loads(status_result)
-
-        # Return combined result
-        return json.dumps({
-            "success": status_data.get("success", False),
-            "deployment_id": deployment_id,
-            "cluster_id": cluster_id,
-            "project_name": project_name,
-            "module": f"{intent}/{flavor}/{version}",
-            "status": status_data.get("status", "UNKNOWN"),
-            "message": status_data.get("message", "Deployment completed"),
-            "elapsed_seconds": status_data.get("elapsed_seconds", 0),
-            "started_at": status_data.get("started_at"),
-            "completed_at": status_data.get("completed_at"),
-            "logs_command": f"get_deployment_logs(cluster_id='{cluster_id}', deployment_id='{deployment_id}')"
-        }, indent=2)
-
-    except Exception as e:
-        error_message = f"Error in deploy_and_wait tool: {str(e)}"
         print(error_message, file=sys.stderr)
         return json.dumps({"success": False, "error": error_message}, indent=2)
