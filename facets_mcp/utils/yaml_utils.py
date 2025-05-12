@@ -11,6 +11,9 @@ from typing import Dict, Any, List, Optional, Tuple
 # Import from project modules
 from facets_mcp.utils.ftf_command_utils import run_ftf_command
 
+# Import Swagger client components (used by validate_module_output_types)
+from facets_mcp.utils.client_utils import ClientUtils
+
 
 def validate_yaml(module_path: str, yaml_content: str) -> str:
     """
@@ -55,14 +58,14 @@ def validate_yaml(module_path: str, yaml_content: str) -> str:
 def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str, Any]:
     """
     Validate output types in facets.yaml.
-    Checks if output types mentioned in the outputs block exist in the Facets control plane.
+    Checks if output types mentioned in both the outputs and inputs blocks exist in the Facets control plane.
     
     Args:
         facets_yaml_content (str): Content of facets.yaml file
         output_api: Optional UI TF Output Controller API instance
         
     Returns:
-        Dict[str, Any]: Dictionary with validation results including missing outputs
+        Dict[str, Any]: Dictionary with validation results including missing outputs from both sources
     """
     try:
         # Parse YAML content
@@ -70,23 +73,33 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
         if not facets_data:
             return {}
         
-        # Check if outputs block exists
-        if 'outputs' not in facets_data:
-            return {}
-        
-        outputs = facets_data.get('outputs', {})
-        if not outputs:
-            return {}
+        # Track output types separately based on their source
+        output_types_from_outputs = []
+        output_types_from_inputs = []
         
         # Extract output types from outputs block
-        output_types = []
-        for output_name, output_def in outputs.items():
-            if 'type' in output_def:
-                output_type = output_def['type']
-                if output_type not in output_types:
-                    output_types.append(output_type)
+        if 'outputs' in facets_data:
+            outputs = facets_data.get('outputs', {})
+            for output_name, output_def in outputs.items():
+                if 'type' in output_def:
+                    output_type = output_def['type']
+                    if output_type not in output_types_from_outputs:
+                        output_types_from_outputs.append(output_type)
         
-        if not output_types:
+        # Extract output types from inputs block
+        if 'inputs' in facets_data:
+            inputs = facets_data.get('inputs', {})
+            for input_name, input_def in inputs.items():
+                if isinstance(input_def, dict) and 'type' in input_def:
+                    input_type = input_def['type']
+                    # Check if the input is using an output type (starts with @)
+                    if input_type.startswith('@') and input_type not in output_types_from_inputs:
+                        output_types_from_inputs.append(input_type)
+        
+        # Combine all output types for validation
+        all_output_types = list(set(output_types_from_outputs + output_types_from_inputs))
+        
+        if not all_output_types:
             return {}
         
         # Skip validation if no API client is provided
@@ -94,9 +107,10 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
             return {"warning": "Output types not validated: API client not provided"}
         
         # Check if output types exist in Facets control plane
-        missing_output_types = []
+        missing_from_outputs = []
+        missing_from_inputs = []
         
-        for output_type in output_types:
+        for output_type in all_output_types:
             # Skip if not in @namespace/name format
             if not output_type.startswith('@') or '/' not in output_type:
                 continue
@@ -113,11 +127,18 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
                 output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
             except Exception as e:
                 if hasattr(e, 'status') and e.status == 404:
-                    missing_output_types.append(output_type)
+                    # Determine which source this missing type comes from
+                    if output_type in output_types_from_outputs:
+                        missing_from_outputs.append(output_type)
+                    if output_type in output_types_from_inputs:
+                        missing_from_inputs.append(output_type)
                 else:
                     print(f"Error checking output type {output_type}: {str(e)}", file=sys.stderr)
         
-        return {"missing_outputs": missing_output_types}
+        return {
+            "missing_from_outputs": missing_from_outputs,
+            "missing_from_inputs": missing_from_inputs
+        }
     
     except Exception as e:
         print(f"Error validating output types: {str(e)}", file=sys.stderr)
@@ -126,7 +147,11 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
 
 def check_missing_output_types(output_validation_results: Dict[str, Any]) -> Tuple[bool, str]:
     """
-    Check for missing output types and generate an appropriate error message.
+    Check for missing output types and generate appropriate error messages.
+    
+    This function checks for output types that are referenced in both the outputs and inputs
+    blocks of facets.yaml but don't exist in the Facets control plane. It provides different
+    guidance based on whether the missing types are in outputs or inputs.
     
     Args:
         output_validation_results (Dict[str, Any]): Results from validate_output_types
@@ -136,21 +161,45 @@ def check_missing_output_types(output_validation_results: Dict[str, Any]) -> Tup
             - has_missing_types: True if missing output types were found
             - error_message: A formatted error message if missing types were found, empty string otherwise
     """
-    if not output_validation_results or "missing_outputs" not in output_validation_results:
+    if not output_validation_results:
         return False, ""
-        
-    missing_outputs = output_validation_results["missing_outputs"]
-    if not missing_outputs:
+    
+    missing_from_outputs = output_validation_results.get("missing_from_outputs", [])
+    missing_from_inputs = output_validation_results.get("missing_from_inputs", [])
+    
+    if not missing_from_outputs and not missing_from_inputs:
         return False, ""
-        
-    missing_types_msg = f"Warning: The following output types do not exist and should be registered first using register_output_type:\n"
     
-    for output_type in missing_outputs:
-        missing_types_msg += f"- {output_type}\n"
+    error_parts = []
     
-    missing_types_msg += "\nPlease register these output types using register_output_type before writing the configuration."
+    # Handle missing output types from outputs block
+    if missing_from_outputs:
+        error_parts.append("Missing output types in 'outputs' block:")
+        error_parts.append("  These output types need to be registered first using register_output_type:")
+        for output_type in missing_from_outputs:
+            error_parts.append(f"  - {output_type}")
+        error_parts.append("")
     
-    return True, missing_types_msg
+    # Handle missing output types from inputs block
+    if missing_from_inputs:
+        error_parts.append("Missing output types in 'inputs' block:")
+        error_parts.append("  These output types are expected from other modules that don't exist yet:")
+        for output_type in missing_from_inputs:
+            error_parts.append(f"  - {output_type}")
+        error_parts.append("  You need to create or configure modules that produce these output types.")
+        error_parts.append("")
+    
+    # Add general guidance
+    if missing_from_outputs and not missing_from_inputs:
+        error_parts.append("Please register the missing output types using register_output_type before writing the configuration.")
+    elif not missing_from_outputs and missing_from_inputs:
+        error_parts.append("Please ensure that modules producing the required output types are properly configured.")
+    else:
+        error_parts.append("Please:")
+        error_parts.append("1. Register the missing output types using register_output_type")
+        error_parts.append("2. Ensure that modules producing the required input types are properly configured")
+    
+    return True, "\n".join(error_parts).rstrip()
 
 
 def read_and_validate_facets_yaml(module_path: str, output_api=None) -> Tuple[bool, str, str]:
@@ -188,3 +237,45 @@ def read_and_validate_facets_yaml(module_path: str, output_api=None) -> Tuple[bo
             return False, facets_yaml_content, error_message
             
     return True, facets_yaml_content, ""
+
+
+def validate_module_output_types(module_path: str) -> Tuple[bool, str]:
+    """
+    Validate output types in a module's facets.yaml file.
+    
+    Args:
+        module_path (str): The path to the module directory.
+        
+    Returns:
+        Tuple[bool, str]: (success, validation_message)
+            - success: True if validation passed or was skipped
+            - validation_message: Message describing the validation results
+    """
+    # Check if facets.yaml exists
+    facets_path = os.path.join(module_path, "facets.yaml")
+    if not os.path.exists(facets_path):
+        return True, "Warning: facets.yaml not found. Output type validation skipped."
+    
+    try:
+        # Initialize API client for output type validation
+        api_client = ClientUtils.get_client()
+        from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+        output_api = UiTfOutputControllerApi(api_client)
+        
+        # Read and validate facets.yaml
+        success, facets_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
+        
+        if not success:
+            return False, f"Output type validation failed: {error_message}"
+        
+        # Additional validation to check output types
+        output_validation_results = validate_output_types(facets_content, output_api)
+        has_missing_types, missing_types_error = check_missing_output_types(output_validation_results)
+        
+        if has_missing_types:
+            return False, f"Missing output types detected:\n{missing_types_error}"
+        else:
+            return True, "✓ All output types validation passed successfully."
+            
+    except Exception as e:
+        return True, f"Warning: Output type validation encountered an error: {str(e)}\nThis may be due to API connectivity issues or invalid configuration."

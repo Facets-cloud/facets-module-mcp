@@ -6,6 +6,7 @@ from facets_mcp.config import mcp, working_directory  # Import from config for s
 from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
 from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types
 from facets_mcp.utils.client_utils import ClientUtils
+from facets_mcp.utils.yaml_utils import validate_module_output_types
 
 # Import Swagger client components
 from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
@@ -85,13 +86,13 @@ def register_output_type(
         name_parts = name.split('/', 1)
         if len(name_parts) != 2:
             return "Error: Name should be in the format '@namespace/name'."
-        
+
         namespace, output_name = name_parts
-        
+
         # Initialize the API client
         api_client = ClientUtils.get_client()
         output_api = UiTfOutputControllerApi(api_client)
-        
+
         # Check if the output already exists
         output_exists = True
         existing_output = None
@@ -102,14 +103,14 @@ def register_output_type(
                 output_exists = False
             else:
                 return f"Error accessing API: {str(e)}"
-        
+
         # If output exists, compare properties and providers
         if output_exists and existing_output:
             comparison_result = compare_output_types(existing_output, properties, providers)
-            
+
             if "error" in comparison_result:
                 return comparison_result["error"]
-                
+
             # If properties or providers are different and no override confirmation, ask for confirmation
             if not comparison_result["all_equal"] and not override_confirmation:
                 diff_message = "The output type already exists with different configuration:\n"
@@ -118,34 +119,34 @@ def register_output_type(
                 return diff_message
             elif comparison_result["all_equal"]:
                 return f"Output type '{name}' already exists with the same configuration. No changes needed."
-        
+
         # Prepare the output type data
         prepared_data = prepare_output_type_registration(name, properties, providers)
         if "error" in prepared_data:
             return prepared_data["error"]
-            
+
         output_type_def = prepared_data["data"]
-        
+
         # Create a temporary YAML file
         try:
             temp_file_path = create_temp_yaml_file(output_type_def)
-            
+
             # Build the command
             command = ["ftf", "register-output-type", temp_file_path]
-            
+
             # Run the command
             result = run_ftf_command(command)
-            
+
             # If we're overriding an existing output, add a note to the result
             if output_exists and override_confirmation:
                 result = f"Successfully overrode existing output type '{name}'.\n\n{result}"
-            
+
             return result
         finally:
             # Clean up the temporary file
             if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
-    
+
     except Exception as e:
         error_message = f"Error registering output type: {str(e)}"
         print(error_message, file=sys.stderr)
@@ -158,7 +159,9 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
     Tool to validate a module directory using FTF CLI.
     
     This tool checks if a Terraform module directory meets the FTF standards.
-    It validates the structure, formatting, and required files of the module.
+    It validates the structure, formatting, required files, and output types of the module.
+    It also checks that all output types referenced in outputs and inputs blocks exist
+    in the Facets control plane.
 
     Args:
     - module_path (str): The path to the module.
@@ -175,7 +178,8 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
         # Validate module path is a directory
         if not os.path.isdir(module_path):
             return f"Error: Module path '{module_path}' is not a directory."
-            
+        
+        # First, run the standard FTF validation
         # Create command
         check_flag = "--check-only" if check_only else ""
         command = [
@@ -185,8 +189,27 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
         if check_flag:
             command.append(check_flag)
             
-        # Run command and return output
-        return run_ftf_command(command)
+        # Run command
+        ftf_result = run_ftf_command(command)
+        
+        # Check if FTF validation passed
+        validation_results = []
+        validation_results.append("FTF Validation Results:")
+        validation_results.append("=" * 40)
+        validation_results.append(ftf_result)
+        validation_results.append("")
+        
+        # Now perform output type validation
+        validation_results.append("Output Type Validation:")
+        validation_results.append("=" * 40)
+        
+        # Use the utility function for output type validation
+        success, validation_message = validate_module_output_types(module_path)
+        validation_results.append(validation_message)
+        
+        # Return combined results
+        return "\n".join(validation_results)
+        
     except Exception as e:
         error_message = f"Error validating module directory: {str(e)}"
         print(error_message, file=sys.stderr)
@@ -211,7 +234,7 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
     git_info = get_git_repo_info(working_directory)
     git_repo_url = git_info["url"]
     git_ref = git_info["ref"]
-    
+
     command = [
         "ftf", "preview-module",
         module_path
@@ -220,9 +243,9 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
         command.extend(["-a", str(auto_create_intent)])
     if publishable:
         command.extend(["-f", str(publishable)])
-    
+
     # Always include git details (now from local repository)
     command.extend(["-g", git_repo_url])
     command.extend(["-r", git_ref])
-    
+
     return run_ftf_command(command)
