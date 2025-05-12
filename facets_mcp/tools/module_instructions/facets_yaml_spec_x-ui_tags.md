@@ -57,6 +57,6 @@ x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for 
 
 ```yaml
 x-ui-visible-if:
-  field: deployment_type
-  value: [ReplicaSet]  # Show only if another field has a specific value(s)
+  field: spec.deployment_type # IMPORTANT: path from spec till the field location
+  values: [ReplicaSet]  # Show only if another field has a specific value(s)
 ```
