@@ -153,7 +153,7 @@ def register_output_type(
 
 
 @mcp.tool()
-def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> str:
+def validate_module(module_path: str, check_only: bool = False) -> str:
     """
     Tool to validate a module directory using FTF CLI.
     
@@ -194,9 +194,9 @@ def run_ftf_validate_directory(module_path: str, check_only: bool = False) -> st
 
 
 @mcp.tool()
-def run_ftf_preview_module(module_path: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
+def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
     """
-    Tool to preview a module using FTF CLI.
+    Tool to preview a module using FTF CLI. This will push a Test version of module to control plane.
     Git repository details are automatically extracted from the local working directory's .git folder.
 
     Args:

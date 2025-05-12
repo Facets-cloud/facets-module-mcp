@@ -284,12 +284,12 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
 
         # Build outputs.tf content
         content_lines = ["locals {"]
-        if output_attributes:
+        if output_attributes is not None:
             content_lines.append("  output_attributes = {")
             for k, v in output_attributes.items():
                 content_lines.append(f"    {k} = {render_terraform_value(v)}")
             content_lines.append("  }")
-        if output_interfaces:
+        if output_interfaces is not None:
             content_lines.append("  output_interfaces = {")
             for k, v in output_interfaces.items():
                 content_lines.append(f"    {k} = {render_terraform_value(v)}")

@@ -1,5 +1,6 @@
 # Ignore all cache directories
 __pycache__/
+.venv
 
 # Ignore IDE specific directories/files
 claude/
@@ -16,3 +17,4 @@ dist/
 
 # Ignore environment files
 .env
+uv.lock
