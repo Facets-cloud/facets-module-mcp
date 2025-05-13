@@ -7,7 +7,8 @@ Defines the values this module exposes for consumption by other modules.
 ```yaml
 outputs:
   <output_name>:
-    type: <@outputs/type>
+    type: @outputs/<type>
+    title: Will appear on the UI
 ```
 
 #### 🔑 Common Fields:
@@ -31,8 +32,10 @@ outputs:
       outputs:
         default:
           type: "@outputs/gcp-project"
+          title: "The GCP Project"
         attributes.project_id:
           type: "@outputs/project-id"
+          title: "The GCP Project id"
       ```
 <important> no need to add properties in the outputs block like inputs.<important>
       This allows consuming modules to wire only the specific part of the output they require, while still having the
