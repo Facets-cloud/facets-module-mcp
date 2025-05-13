@@ -12,6 +12,7 @@ from swagger_client.rest import ApiException
 from facets_mcp.config import mcp
 from facets_mcp.utils.client_utils import ClientUtils
 
+
 @mcp.tool()
 def list_test_projects() -> str:
     """
@@ -23,17 +24,18 @@ def list_test_projects() -> str:
     api_instance = UiStackControllerApi(ClientUtils.get_client())
     stacks = api_instance.get_stacks_using_get1()
     stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
-    return stack_names if stack_names else "No test projects found"
+    return stack_names if stack_names else "No test projects found. Ask the user to create one from the Facets UI."
+
 
 @mcp.tool()
 def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str) -> str:
     """
-    Test a module that has been previewed by asking user about project_name where it needs to be tested.
+    Test a module that has been previewed by asking the user for the project_name where it needs to be tested.
 
     
     This tool checks if the project exists, verifies if it supports preview modules,
-    and then does terraform apply you can check logs for the apply using.
-    
+    and then does terraform apply. You can check logs for the apply using get_deployment_logs, and check the status of the deployment using check_deployment_status.
+
     Args:
         project_name (str): The name of the test project (stack) to deploy to
         intent (str): The intent of the module to deploy
@@ -58,7 +60,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Enable this feature in the project settings by marking it as a Test Project."
+                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
@@ -293,7 +295,6 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
     except Exception as e:
         error_message = f"Error in check_deployment_status tool: {str(e)}"
-        print(error_message, file=sys.stderr)
         return json.dumps({"success": False, "error": error_message}, indent=2)
 
 
@@ -338,7 +339,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
                     deployment_id=deployment_id
                 )
                 status = deployment.status if hasattr(deployment, 'status') else "UNKNOWN"
-            except:
+            except ApiException:
                 status = "UNKNOWN"
 
             return json.dumps({
