@@ -9,6 +9,7 @@ To consume a provider:
 inputs:
   <input_name>:
     type: "@outputs/<type>"
+    optional: false
     providers:
       - <provider_name>
 ```
@@ -22,6 +23,7 @@ from the module that produces the given `@outputs` type.
 inputs:
   kubernetes_cluster_details:
     type: "@outputs/kubernetes_cluster_details"
+    optional: false
     providers:
       - helm
 ```
