@@ -34,6 +34,8 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 
 The MCP Server requires [uv](https://github.com/astral-sh/uv) for MCP orchestration.
 
+The package is available on PyPI: [facets-module-mcp](https://pypi.org/project/facets-module-mcp/)
+
 #### Install `uv` with Homebrew:
 ```bash
 brew install uv
@@ -53,6 +55,32 @@ Add the following to your `claude_desktop_config.json`:
       "args": [
         "facets-module-mcp@<VERSION>",
         "/Path/to/working-directory"  # This should be the directory where your Terraform modules are checked out or a subdirectory containing the modules you want to work with
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "FACETS_PROFILE": "default",
+        "FACETS_USERNAME": "<YOUR_USERNAME>",
+        "FACETS_TOKEN": "<YOUR_TOKEN>",
+        "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
+      }
+    }
+  }
+}
+```
+
+For a locally cloned repository, use:
+
+```json
+{
+  "mcpServers": {
+    "facets-module": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/your/cloned/facets-module-mcp/facets_mcp",
+        "run",
+        "facets_server.py",
+        "/path/to/working-directory"
       ],
       "env": {
         "PYTHONUNBUFFERED": "1",
