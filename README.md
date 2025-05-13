@@ -13,6 +13,9 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 * **Facets Module Generation**  
   Interactive prompt-driven workflows facilitate generation of Terraform modules with metadata, variable, and input management using FTF CLI.
 
+* **Module Preview and Testing**  
+  Comprehensive deployment workflow supporting module preview, testing in dedicated test projects, and real-time deployment monitoring with status checks and logs. You will need a test project with a running environment and an enabled resource added for the module being tested (to be done manually from the Facets UI).
+
 * **Cloud Environment Integration**  
   Supports multiple cloud providers and automatically extracts git repository metadata to enrich module previews.
 
@@ -29,10 +32,16 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `run_ftf_preview_module`                 | Previews a module with git context extracted automatically.                                                                              |
 | `get_local_modules`                      | Scans and lists all local Terraform modules by searching for `facets.yaml` recursively, including loading outputs.tf content if present. |
 | `search_modules_after_confirmation`      | Searches modules by filtering for a string within facets.yaml files, supports pagination, and returns matched modules with details.      |
+| `list_test_projects`                     | Retrieves and returns the names of all available test projects for deployment.                                                           |
+| `test_already_previewed_module`          | Tests a module that has been previewed by deploying it to a specified test project.                                                      |
+| `check_deployment_status`                | Checks the status of a deployment with optional waiting for completion.                                                                  |
+| `get_deployment_logs`                    | Retrieves logs for a specific deployment.                                                                                               |
 
 ## Prerequisites
 
 The MCP Server requires [uv](https://github.com/astral-sh/uv) for MCP orchestration.
+
+The package is available on PyPI: [facets-module-mcp](https://pypi.org/project/facets-module-mcp/)
 
 #### Install `uv` with Homebrew:
 ```bash
@@ -66,6 +75,32 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
+For a locally cloned repository, use:
+
+```json
+{
+  "mcpServers": {
+    "facets-module": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/your/cloned/facets-module-mcp/facets_mcp",
+        "run",
+        "facets_server.py",
+        "/path/to/working-directory"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "FACETS_PROFILE": "default",
+        "FACETS_USERNAME": "<YOUR_USERNAME>",
+        "FACETS_TOKEN": "<YOUR_TOKEN>",
+        "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
+      }
+    }
+  }
+}
+```
+
 ⚠ Replace `<YOUR_USERNAME>`, `<YOUR_TOKEN>`, and `<YOUR_CONTROL_PLANE_URL>` with your actual authentication data.
 
 The `uv` runner automatically manages environment and dependency setup using the `pyproject.toml` file in the MCP directory.
@@ -86,6 +121,8 @@ Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/c
 - Use core tools (`list_files`, `read_file`, `write_config_files`, etc.) for Terraform code management.
 
 - Use FTF CLI integration tools for module scaffolding, validation, and preview workflows.
+
+- Complete deployment flow: preview modules with `run_ftf_preview_module`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
 
 - Employ MCP prompts like `generate_new_module` to guide module generation interactively.
 
