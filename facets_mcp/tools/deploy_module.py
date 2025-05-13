@@ -60,7 +60,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user enable this feature in the project settings by marking it as a Test Project."
+                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
@@ -179,8 +179,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in deploy_module tool: {str(e)}"
-        print(error_message, file=sys.stderr)
+        error_message = f"Error in test_already_previewed_module tool: {str(e)}"
         return json.dumps({"success": False, "instructions:": error_message}, indent=2)
 
 
@@ -365,5 +364,4 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
     except Exception as e:
         error_message = f"Error in get_deployment_logs tool: {str(e)}"
-        print(error_message, file=sys.stderr)
         return json.dumps({"success": False, "error": error_message}, indent=2)
