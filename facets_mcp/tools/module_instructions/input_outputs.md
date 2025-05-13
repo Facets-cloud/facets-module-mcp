@@ -1,3 +1,44 @@
+### 🔹 `inputs`
+
+Defines the values this module requires as inputs from other modules.
+
+#### ✅ Syntax:
+
+```yaml
+inputs:
+  <input_name>:
+    type: @outputs/<type>
+    optional: true|false
+    displayName: Display name for UI
+    description: Description of the input
+```
+
+#### 🔑 Common Fields:
+
+- **`type`**: Required. Specifies the output type from another module (e.g. `@outputs/kubernetes-cluster`).
+- **`optional`**: Boolean. Whether this input is required (default: `false`).
+- **`displayName`**: String. Human-readable name shown in the UI.
+- **`description`**: String. Explanation of what this input is used for.
+
+#### 💡 Example:
+
+```yaml
+inputs:
+  cluster_config:
+    type: "@outputs/kubernetes-cluster"
+    optional: false
+    displayName: "Kubernetes Cluster"
+    description: "The target Kubernetes cluster for deployment"
+  
+  storage_account:
+    type: "@outputs/azure-storage-account"
+    optional: true
+    displayName: "Storage Account (Optional)"
+    description: "Azure storage account for persistent data"
+```
+
+---
+
 ### 🔹 `outputs`
 
 Defines the values this module exposes for consumption by other modules.

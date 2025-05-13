@@ -53,7 +53,7 @@ outputs:
 #### 🔍 Breakdown
 
 - **`outputs`**: Declares what this module exposes to others.
-- **`type`**: Specifies the `@output` type identifier that consuming modules can reference. NEVER INFER IT LIST OTHER MODULES TO GET RELEVANT VALUE
+- **`type`**: Specifies the `@outputs` type identifier that consuming modules can reference. NEVER INFER IT LIST OTHER MODULES TO GET RELEVANT VALUE
 - **`title`**: The title of the output that will appear on the UI.
 - **`providers`**: Lists the provider configurations this module makes available.
 - **`attributes`**: Maps provider-specific fields to values from the module’s `output_attributes`. These mappings
