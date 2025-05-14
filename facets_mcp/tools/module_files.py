@@ -278,13 +278,23 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
         def render_terraform_value(v):
             terraform_keywords = ["var", "local", "module", "path", "terraform", "data"]  # Add more keywords if needed
 
-            if isinstance(v, (int, float, bool)):
-                return str(v).lower() if isinstance(v, bool) else str(v)
+            if isinstance(v, bool):
+                return  str(v).lower()
+            elif isinstance(v, (int,float)):
+                return str(v)
             elif isinstance(v, str):
                 if any(v.startswith(keyword + '.') for keyword in terraform_keywords):
                     return v
                 else:
                     return json.dumps(v)
+            elif isinstance(v, list):
+                return '[' + ', '.join(render_terraform_value(i) for i in v) + ']'
+            elif isinstance(v, dict):
+                tf_lines = ["{"]
+                for k, val in v.items():
+                    tf_lines.append(f"  {k} = {render_terraform_value(val)}")
+                tf_lines.append("}")
+                return '\n'.join(tf_lines)
             else:
                 return json.dumps(v)
 
