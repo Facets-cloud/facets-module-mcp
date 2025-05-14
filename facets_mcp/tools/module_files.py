@@ -276,14 +276,12 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
 
         # Helper to render values correctly for Terraform
         def render_terraform_value(v):
-            terraform_keywords = ["var", "local", "module", "path", "terraform", "data"]  # Add more keywords if needed
-
             if isinstance(v, bool):
                 return  str(v).lower()
             elif isinstance(v, (int,float)):
                 return str(v)
             elif isinstance(v, str):
-                if any(v.startswith(keyword + '.') for keyword in terraform_keywords):
+                if '.' in v and not v.startswith('${'):
                     return v
                 else:
                     return json.dumps(v)
