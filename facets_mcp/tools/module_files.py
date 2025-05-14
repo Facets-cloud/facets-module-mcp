@@ -276,11 +276,17 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
 
         # Helper to render values correctly for Terraform
         def render_terraform_value(v):
+            terraform_keywords = ["var", "local", "module", "path", "terraform", "data"]  # Add more keywords if needed
+
             if isinstance(v, (int, float, bool)):
                 return str(v).lower() if isinstance(v, bool) else str(v)
-            if isinstance(v, str):
-                return v if '.' in v else json.dumps(v)
-            return json.dumps(v)
+            elif isinstance(v, str):
+                if any(v.startswith(keyword + '.') for keyword in terraform_keywords):
+                    return v
+                else:
+                    return json.dumps(v)
+            else:
+                return json.dumps(v)
 
         # Build outputs.tf content
         content_lines = ["locals {"]
