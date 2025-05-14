@@ -1,3 +1,44 @@
+### 🔹 `inputs`
+
+Defines the values this module requires as inputs from other modules.
+
+#### ✅ Syntax:
+
+```yaml
+inputs:
+  <input_name>:
+    type: @outputs/<type>
+    optional: true|false
+    displayName: Display name for UI
+    description: Description of the input
+```
+
+#### 🔑 Common Fields:
+
+- **`type`**: Required. Specifies the output type from another module (e.g. `@outputs/kubernetes-cluster`).
+- **`optional`**: Boolean. Whether this input is required (default: `false`).
+- **`displayName`**: String. Human-readable name shown in the UI.
+- **`description`**: String. Explanation of what this input is used for.
+
+#### 💡 Example:
+
+```yaml
+inputs:
+  cluster_config:
+    type: "@outputs/kubernetes-cluster"
+    optional: false
+    displayName: "Kubernetes Cluster"
+    description: "The target Kubernetes cluster for deployment"
+  
+  storage_account:
+    type: "@outputs/azure-storage-account"
+    optional: true
+    displayName: "Storage Account (Optional)"
+    description: "Azure storage account for persistent data"
+```
+
+---
+
 ### 🔹 `outputs`
 
 Defines the values this module exposes for consumption by other modules.
@@ -7,7 +48,8 @@ Defines the values this module exposes for consumption by other modules.
 ```yaml
 outputs:
   <output_name>:
-    type: <@outputs/type>
+    type: @outputs/<type>
+    title: Will appear on the UI
 ```
 
 #### 🔑 Common Fields:
@@ -31,8 +73,10 @@ outputs:
       outputs:
         default:
           type: "@outputs/gcp-project"
+          title: "The GCP Project"
         attributes.project_id:
           type: "@outputs/project-id"
+          title: "The GCP Project id"
       ```
 <important> no need to add properties in the outputs block like inputs.<important>
       This allows consuming modules to wire only the specific part of the output they require, while still having the
