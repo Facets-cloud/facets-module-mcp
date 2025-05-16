@@ -276,11 +276,25 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
 
         # Helper to render values correctly for Terraform
         def render_terraform_value(v):
-            if isinstance(v, (int, float, bool)):
-                return str(v).lower() if isinstance(v, bool) else str(v)
-            if isinstance(v, str):
-                return v if '.' in v else json.dumps(v)
-            return json.dumps(v)
+            if isinstance(v, bool):
+                return  str(v).lower()
+            elif isinstance(v, (int,float)):
+                return str(v)
+            elif isinstance(v, str):
+                if '.' in v and not v.startswith('${'):
+                    return v
+                else:
+                    return json.dumps(v)
+            elif isinstance(v, list):
+                return '[' + ', '.join(render_terraform_value(i) for i in v) + ']'
+            elif isinstance(v, dict):
+                tf_lines = ["{"]
+                for k, val in v.items():
+                    tf_lines.append(f"  {k} = {render_terraform_value(val)}")
+                tf_lines.append("}")
+                return '\n'.join(tf_lines)
+            else:
+                return json.dumps(v)
 
         # Build outputs.tf content
         content_lines = ["locals {"]
