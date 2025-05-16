@@ -8,7 +8,7 @@ readme = "README.md"
 license = {text = "MIT"}
 authors = [
     { name = "Anshul Sao", email = "anshul@facets.cloud" },
-    { name = "Anuj Hydrabadi", email = "anujhydrabadi@facets.cloud" },
+    { name = "Anuj Hydrabadi", email = "anuj.hydrabadi@facets.cloud" },
     { name = "Sanmesh Kakade", email = "sanmesh.kakade@facets.cloud" },
 ]
 dependencies = [
