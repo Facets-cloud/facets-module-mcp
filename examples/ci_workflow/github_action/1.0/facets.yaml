@@ -1,0 +1,159 @@
+clouds:
+- kubernetes
+description: Creates a GitHub Actions workflow to build and test Java Maven applications
+  with optional SonarQube integration
+flavor: github_action
+iac:
+  validated_files:
+  - variables.tf
+intent: ci_workflow
+outputs:
+  default:
+    title: GitHub Actions CI Workflow
+    type: '@outputs/ci_workflow'
+sample:
+  disabled: false
+  flavor: github_action
+  kind: ci_workflow
+  spec:
+    branch_name: main
+    docker_image_name: my-java-app
+    docker_registry: docker.io
+    dockerfile_path: Dockerfile
+    enable_docker_build: true
+    enable_sonarqube: false
+    java_version: '17'
+    repository_name: my-java-app
+    workflow_name: Java Maven CI
+  version: '1.0'
+spec:
+  description: Creates a GitHub Actions workflow to build and test Java Maven applications
+    with optional SonarQube integration
+  properties:
+    branch_name:
+      default: main
+      description: The branch name where the GitHub workflow will be added
+      title: Branch Name
+      type: string
+    docker_image_name:
+      default: ''
+      description: The name of the Docker image to build
+      title: Docker Image Name
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_docker_build
+        values:
+        - true
+    docker_password:
+      default: ''
+      description: Password for Docker registry authentication (will be stored as
+        a GitHub secret)
+      title: Docker Registry Password
+      type: string
+      x-ui-secret-ref: true
+      x-ui-visible-if:
+        field: spec.enable_docker_build
+        values:
+        - true
+    docker_registry:
+      default: docker.io
+      description: The Docker registry where the image will be pushed (e.g., docker.io,
+        ghcr.io)
+      title: Docker Registry
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_docker_build
+        values:
+        - true
+    docker_username:
+      default: ''
+      description: Username for Docker registry authentication (will be stored as
+        a GitHub secret)
+      title: Docker Registry Username
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_docker_build
+        values:
+        - true
+    dockerfile_path:
+      default: Dockerfile
+      description: The path to the Dockerfile relative to the repository root
+      title: Dockerfile Path
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_docker_build
+        values:
+        - true
+    enable_docker_build:
+      default: false
+      description: Toggle to enable or disable Docker build and push to container
+        registry
+      title: Enable Docker Build
+      type: boolean
+    enable_sonarqube:
+      default: false
+      description: Toggle to enable or disable SonarQube integration in the workflow
+      title: Enable SonarQube
+      type: boolean
+    java_version:
+      default: '17'
+      description: Java version to use for the build
+      enum:
+      - '8'
+      - '11'
+      - '17'
+      - '21'
+      title: Java Version
+      type: string
+    repository_name:
+      description: The name of the GitHub repository where the workflow will be created
+      pattern: ^[a-zA-Z0-9_.-]+$
+      title: Repository Name
+      type: string
+      x-ui-visible-if:
+      - field: spec.java_version
+        values:
+        - '11'
+      - field: spec.enable_sonarqube
+        values:
+        - true
+    sonarqube_host_url:
+      default: ''
+      description: The URL of your SonarQube instance
+      title: SonarQube Host URL
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_sonarqube
+        values:
+        - true
+    sonarqube_project_key:
+      default: ''
+      description: The project key to be used for SonarQube analysis
+      title: SonarQube Project Key
+      type: string
+      x-ui-visible-if:
+        field: spec.enable_sonarqube
+        values:
+        - true
+    sonarqube_token:
+      default: ''
+      description: The token for SonarQube authentication (will be stored as a GitHub
+        secret)
+      title: SonarQube Token
+      type: string
+      x-ui-secret-ref: true
+      x-ui-visible-if:
+        field: spec.enable_sonarqube
+        values:
+        - true
+    workflow_name:
+      default: Java Maven CI
+      description: Name of the GitHub workflow
+      title: Workflow Name
+      type: string
+  required:
+  - repository_name
+  - branch_name
+  title: GitHub Actions CI Workflow for Java Maven
+  type: object
+version: '1.0'
