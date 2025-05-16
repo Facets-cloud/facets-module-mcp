@@ -130,6 +130,15 @@ Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/c
 
 ---
 
+## Example Usage
+
+For a comprehensive example of how to use this MCP server with Claude, check out this chat session:
+[Creating a Terraform Module with Facets MCP](https://claude.ai/share/2ebe981f-48f4-4648-881e-4929ebbf0f59)
+
+This example demonstrates the complete workflow from module generation to testing and deployment.
+
+---
+
 ## License
 
 This project is licensed under the MIT License. You are free to use, modify, and distribute it under its terms.
