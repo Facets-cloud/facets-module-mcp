@@ -1,5 +1,8 @@
 # GitHub Actions CI Workflow for Java Maven
 
+## Chat Link
+https://claude.ai/share/2ebe981f-48f4-4648-881e-4929ebbf0f59
+
 This module creates a GitHub Actions workflow for building, testing, and optionally analyzing Java Maven applications. It also includes options for Docker container builds and registry publishing.
 
 ## Overview
