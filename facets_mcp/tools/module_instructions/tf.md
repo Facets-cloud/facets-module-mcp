@@ -14,7 +14,7 @@ Every Facets module automatically receives the following variables:
 - `environment`: An object with environment-specific metadata:
   - `name`: Logical environment name.
   - `unique_name`: Globally unique environment identifier.
-  - `cloud_tags`: Standard tags applied to all resources for control plane traceability.
+  - `cloud_tags`: Standard tags applied to all resources for control plane traceability. Always merge this tags with user supplied tags wherever applicable.
 
 These are injected automatically and do not need to be declared manually.
 
@@ -35,6 +35,7 @@ Terraform logic in `main.tf` must only use:
 ### Rules & Restrictions
 
 - Do **not** define `provider` blocks. Providers must be injected through inputs.
+- Always add `resourceName` and `resourceType` tags/labels wherever applicable. Value of `resourceType` will **always** be the intent defined in facets.yaml and `resourceName` will be value of instance_name terraform variable.
 - Do **not** define `output` blocks. Use `locals.output_attributes` to expose values.
 - Reference only variables defined in `variables.tf`.
 - Always derive names from `instance_name` and `environment.unique_name` unless specified by user.

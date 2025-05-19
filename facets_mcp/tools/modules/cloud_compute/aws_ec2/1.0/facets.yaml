@@ -1,0 +1,312 @@
+intent: cloud_compute
+flavor: aws_ec2
+version: "1.0"
+clouds: [ aws ]
+description: A detailed AWS EC2 instance module that allows for comprehensive VM configuration including instance type, AMI, storage, networking, security groups, and more.
+spec:
+  title: AWS EC2 Detailed VM Configuration
+  description: A detailed AWS EC2 instance module that allows for comprehensive VM configuration including instance type, AMI, storage, networking, security groups, and more.
+  type: object
+  properties:
+    instance_type:
+      title: Instance Type
+      description: EC2 instance type to use for the VM (e.g., t3.micro, m5.large, c5.xlarge)
+      type: string
+      x-ui-placeholder: "e.g., t3.micro, m5.large, c5.xlarge"
+    ami_id:
+      title: AMI ID
+      description: The ID of the Amazon Machine Image to use. Leave blank to use the latest Amazon Linux 2 AMI.
+      type: string
+      pattern: "^(ami-[a-f0-9]{17})?$"
+      x-ui-error-message: "AMI ID must be in the format ami-xxxxxxxxxxxxxxxxx or left empty"
+      x-ui-placeholder: "e.g., ami-0c55b159cbfafe1f0"
+    root_volume_size:
+      title: Root Volume Size (GB)
+      description: Size of the root volume in GB
+      type: number
+      minimum: 8
+      maximum: 16384
+    root_volume_type:
+      title: Root Volume Type
+      description: Type of the root EBS volume
+      type: string
+      enum: ["gp2", "gp3", "io1", "io2", "sc1", "st1", "standard"]
+    associate_public_ip:
+      title: Associate Public IP
+      description: Associate a public IP address with the instance
+      type: boolean
+      default: true
+    enable_detailed_monitoring:
+      title: Enable Detailed Monitoring
+      description: Enable detailed CloudWatch monitoring (additional charges apply)
+      type: boolean
+      default: false
+    hostname:
+      title: Hostname
+      description: Custom hostname for the instance
+      type: string
+      x-ui-placeholder: "e.g., webserver-01"
+    user_data:
+      title: User Data
+      description: Custom user data script for instance initialization (bash script)
+      type: string
+      x-ui-placeholder: "#!/bin/bash\n# Add your bash script here"
+    additional_volumes:
+      title: Additional EBS Volumes
+      description: Additional EBS volumes to attach to the instance
+      type: object
+      x-ui-toggle: true
+      properties:
+        enabled:
+          title: Enable Additional Volumes
+          description: Enable or disable additional EBS volumes
+          type: boolean
+          default: false
+        volumes:
+          title: Volume Configurations
+          description: Configuration for additional volumes
+          type: object
+          x-ui-visible-if:
+            field: spec.additional_volumes.enabled
+            values: [true]
+          properties:
+            data_volume:
+              type: object
+              properties:
+                device_name:
+                  title: Device Name
+                  description: The device name (e.g., /dev/sdf, /dev/sdg)
+                  type: string
+                  pattern: "^/dev/sd[f-z]$"
+                  x-ui-error-message: "Device name must be in the format /dev/sd[f-z]"
+                size:
+                  title: Volume Size (GB)
+                  description: Size of the volume in GB
+                  type: number
+                  minimum: 1
+                  maximum: 16384
+                type:
+                  title: Volume Type
+                  description: Type of the EBS volume
+                  type: string
+                  enum: ["gp2", "gp3", "io1", "io2", "sc1", "st1", "standard"]
+                encrypted:
+                  title: Encrypt Volume
+                  description: Enable or disable volume encryption
+                  type: boolean
+                  default: true
+              required:
+                - device_name
+                - size
+                - type
+    iam:
+      title: IAM Configuration
+      description: IAM settings for the EC2 instance
+      type: object
+      x-ui-toggle: true
+      properties:
+        instance_profile_config:
+          title: Instance Profile Configuration
+          description: Configuration for the IAM instance profile
+          type: string
+          enum: ["none", "existing", "create_new"]
+          default: "none"
+        existing_instance_profile_name:
+          title: Existing Instance Profile Name
+          description: Name of an existing IAM instance profile to attach to the instance
+          type: string
+          x-ui-visible-if:
+            field: spec.iam.instance_profile_config
+            values: ["existing"]
+          x-ui-placeholder: "e.g., MyEC2InstanceProfile"
+        create_instance_profile:
+          title: New Instance Profile Configuration
+          description: Configuration for creating a new IAM role and instance profile
+          type: object
+          x-ui-visible-if:
+            field: spec.iam.instance_profile_config
+            values: ["create_new"]
+          properties:
+            policy_json:
+              title: Policy JSON
+              description: JSON policy document to attach to the IAM role (use {} for empty policy)
+              type: string
+              default: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:ListAllMyBuckets\",\"Resource\":\"*\"}]}"
+    security_groups:
+      title: Security Group Configuration
+      description: Security settings for the EC2 instance
+      type: object
+      properties:
+        ssh_access:
+          title: SSH Access
+          description: "Configure SSH access to the instance (SSH on port 22 is always created for management)"
+          type: object
+          properties:
+            source_cidr:
+              title: Source CIDR Block 
+              description: CIDR block to allow SSH access from (e.g., 0.0.0.0/0 for anywhere, or your IP/32 for just your IP)
+              type: string
+              default: "0.0.0.0/0"
+              pattern: "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$"
+              x-ui-error-message: "CIDR block must be in the format x.x.x.x/x"
+            key_name:
+              title: SSH Key Name
+              description: Name of an existing key pair to use for SSH access (leave blank to generate a new key pair)
+              type: string
+              x-ui-placeholder: "e.g., my-key-pair"
+        ingress_rules:
+          title: Custom Ingress Rules
+          description: "Additional custom security group ingress rules (Note: SSH on port 22 is already created - do not include it here)"
+          type: object
+          x-ui-toggle: true
+          properties:
+            rules:
+              title: Ingress Rules List
+              description: List of custom ingress rules
+              type: object
+              patternProperties:
+                "^[a-zA-Z0-9_-]+$":
+                  type: object
+                  properties:
+                    description:
+                      title: Description
+                      description: Description of the security rule
+                      type: string
+                    from_port:
+                      title: From Port
+                      description: Start port range
+                      type: number
+                      minimum: 0
+                      maximum: 65535
+                    to_port:
+                      title: To Port
+                      description: End port range
+                      type: number
+                      minimum: 0
+                      maximum: 65535
+                    protocol:
+                      title: Protocol
+                      description: Protocol (tcp, udp, icmp, or -1 for all)
+                      type: string
+                      enum: ["tcp", "udp", "icmp", "-1"]
+                      default: "tcp"
+                    cidr_blocks:
+                      title: CIDR Blocks
+                      description: CIDR block to allow access from (comma-separated)
+                      type: string
+                      pattern: "^(([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})(,([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})*$"
+                      x-ui-error-message: "CIDR blocks must be in the format x.x.x.x/x and comma-separated"
+                  required:
+                    - description
+                    - from_port
+                    - to_port
+                    - protocol
+                    - cidr_blocks
+        egress_rules:
+          title: Custom Egress Rules
+          description: Custom security group egress rules 
+          type: object
+          x-ui-toggle: true
+          properties:
+            restrict_default:
+              title: Restrict Default Egress
+              description: By default, all outbound traffic is allowed. Enable this to restrict outbound traffic.
+              type: boolean
+              default: false
+            rules:
+              title: Egress Rules List
+              description: List of custom egress rules
+              type: object
+              x-ui-visible-if:
+                field: spec.security_groups.egress_rules.restrict_default
+                values: [true]
+              patternProperties:
+                "^[a-zA-Z0-9_-]+$":
+                  type: object
+                  properties:
+                    description:
+                      title: Description
+                      description: Description of the security rule
+                      type: string
+                    from_port:
+                      title: From Port
+                      description: Start port range
+                      type: number
+                      minimum: 0
+                      maximum: 65535
+                    to_port:
+                      title: To Port
+                      description: End port range
+                      type: number
+                      minimum: 0
+                      maximum: 65535
+                    protocol:
+                      title: Protocol
+                      description: Protocol (tcp, udp, icmp, or -1 for all)
+                      type: string
+                      enum: ["tcp", "udp", "icmp", "-1"]
+                      default: "tcp"
+                    cidr_blocks:
+                      title: CIDR Blocks
+                      description: CIDR block to allow access to (comma-separated)
+                      type: string
+                      pattern: "^(([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})(,([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})*$"
+                      x-ui-error-message: "CIDR blocks must be in the format x.x.x.x/x and comma-separated"
+                  required:
+                    - description
+                    - from_port
+                    - to_port
+                    - protocol
+                    - cidr_blocks
+    tags:
+      title: Custom Tags
+      description: Custom tags to add to the EC2 instance (in addition to required Name, resourceType, and resourceName tags)
+      type: object
+      x-ui-toggle: true
+      patternProperties:
+        "^[a-zA-Z0-9_-]+$":
+          type: object
+          properties:
+            key:
+              title: Tag Key
+              description: Tag key name
+              type: string
+            value:
+              title: Tag Value
+              description: Tag value
+              type: string
+          required:
+            - key
+            - value
+  required:
+    - instance_type
+    - root_volume_size
+    - root_volume_type
+inputs:
+  cloud_account_details:
+    displayName: Cloud Account
+    description: The cloud account to be used for creating the compute instance.
+    optional: false
+    type: "@outputs/cloud_account"
+    providers:
+    - aws
+  network_details:
+    displayName: Network
+    description: The network to be used for creating the compute instance.
+    optional: false
+    type: "@outputs/network"
+outputs:
+  default:
+    type: "@outputs/cloud_compute"
+sample:
+  kind: cloud_compute
+  flavor: aws_ec2
+  version: "1.0"
+  disabled: true
+  spec:
+    type: object
+    properties:
+      instance_type: "t3.micro"
+      ami_id: ""
+      root_volume_size: 30
+      root_volume_type: "gp3"

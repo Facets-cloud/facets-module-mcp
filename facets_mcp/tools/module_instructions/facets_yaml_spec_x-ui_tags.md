@@ -11,6 +11,12 @@ x-ui-output-type: "@output/kubernetes_service"  # Select from modules exporting 
 ```
 
 ```yaml
+x-ui-output:
+  field: attributes.subnet_id # Select a specific attribute from module
+  type: "@outputs/network" # Use this output type to derive the value of feild from another module
+```
+
+```yaml
 x-ui-secret-ref: true  # Reference a secret defined at the project level. Use this when a field has to be secret
 ```
 
@@ -44,7 +50,7 @@ x-ui-toggle: true  # Render this field group as collapsible. Use this to keep th
 ```
 
 ```yaml
-x-ui-yaml-editor: true  # Use YAML editor for complex object input. Use this when you want to surface a yaml editor, use this for complex objects only
+x-ui-yaml-editor: true  # Use YAML editor for complex object input expect in YAML format only. Use this when you want to surface a yaml editor, use this for complex objects only
 ```
 DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 ---
@@ -52,8 +58,9 @@ DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 ### ❗ Validation & Conditional Display
 
 ```yaml
-x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for validation failure
+x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for validation failure 
 ```
+USE THE ABOVE FIELD WHENEVER PATTERN IS DEFINED FOR TYPE STRING FEILDS
 
 ```yaml
 x-ui-visible-if:
