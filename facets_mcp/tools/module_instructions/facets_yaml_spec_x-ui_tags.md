@@ -13,7 +13,7 @@ x-ui-output-type: "@output/kubernetes_service"  # Select from modules exporting 
 ```yaml
 x-ui-output:
   field: attributes.subnet_id # Select a specific attribute from module
-  type: "@outputs/network" # Use this output type to derive the value of feild from another module
+  type: "@outputs/network" # Use this output type to derive the value of field from another module
 ```
 
 ```yaml
