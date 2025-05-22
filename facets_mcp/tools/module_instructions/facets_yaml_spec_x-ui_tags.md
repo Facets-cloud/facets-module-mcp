@@ -19,8 +19,7 @@ x-ui-variable-ref: true  # Reference a variable defined at the project level. Us
 ```
 
 ```yaml
-x-ui-dynamic-enum:
-  sourceField: container_ports  # Populate dropdown based on another field's value
+x-ui-dynamic-enum: spec.runtime.ports.*.port  # Populate dropdown based on another field's value, * also supported
 ```
 
 ---
