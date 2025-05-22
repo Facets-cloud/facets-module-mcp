@@ -1,0 +1,41 @@
+intent: network
+flavor: aws_vpc
+version: "1.0"
+clouds: [ aws ]
+description: A Network is a way of communication between devices. Adds network of AWS VPC flavor.
+spec:
+  title: Network
+  description: Specifications for AWS VPC network.
+  type: object
+  properties:
+    vpc_cidr:
+      title: VPC CIDR
+      description: IPv4 CIDR block for the VPC. The CIDR block must be a valid IPv4 CIDR block and should have a mask of /16.
+      type: string
+      pattern: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/16$"
+      x-ui-placeholder: "Eg: 10.0.0.0/16"
+      x-ui-error-message: "CIDR block must be a valid IPv4 CIDR block and should have a mask of /16."
+      x-ui-overrides-only: true  # Show only when overriding per environment as this changes per environment.
+      x-ui-override-disable: true # Disables the override option in UI as resource is created, changing this feild will cause the resource to be recreated.
+  required:
+  - vpc_cidr
+inputs:
+  cloud_account_details:
+    displayName: Cloud Account
+    description: The cloud account to be used for creating the network.
+    optional: false
+    type: "@outputs/cloud_account"
+    providers: # field to specify the provider to be used for creating the resources in the current terraform module
+    - aws # aws is the provider exposed by cloud_account module
+outputs:
+  default:
+    type: "@outputs/network"
+sample:
+  kind: network
+  flavor: aws_vpc
+  version: "1.0"
+  disabled: true
+  spec:
+    type: object
+    properties:
+      vpc_cidr: "" # dont set any value as this is a sample

@@ -31,7 +31,7 @@ Defines inputs that developers can configure when using the module.
 - `description`
 - `default`
 - `enum`
-- `pattern`
+- `pattern` (use this to define regex wherever applicable)
 - `minimum`, `maximum`
 - `minLength`, `maxLength`
 
