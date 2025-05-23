@@ -28,7 +28,7 @@ def FIRST_STEP_get_instructions() -> str:
         for filename in os.listdir(base_dir):
             if filename.endswith(".md"):
                 file_path = os.path.join(base_dir, filename)
-                with open(file_path, "r") as file:
+                with open(file_path, "r", encoding='utf-8') as file:
                     instructions[filename] = file.read()
 
     except FileNotFoundError as e:
