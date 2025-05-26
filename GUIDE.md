@@ -93,7 +93,7 @@ YOU: "Validate the input types."
 
 AI: [Checks input types and finds issues]
 "I've identified that we need to update the AWS provider input type from 
-@output/aws_provider to @output/custom_aws_provider and add the providers 
+@outputs/aws_provider to @outputs/custom_aws_provider and add the providers 
 section to specify that we need the AWS provider."
 
 YOU: "Preview the module."
