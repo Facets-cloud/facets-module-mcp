@@ -92,15 +92,15 @@ def get_output_type_details_from_api(output_type: str) -> Dict[str, Any]:
         return {"error": error_message}
 
 
-def get_inputs_by_provider_source_from_api(provider_source: str) -> str:
+def find_output_types_with_provider_from_api(provider_source: str) -> str:
     """
-    Get inputs for input param provider source by calling the API method.
+    Find all output types that include a specific provider source.
     
     Args:
         provider_source (str): The provider source name to search for.
         
     Returns:
-        str: JSON string containing the formatted output information.
+        str: JSON string containing the formatted output type information.
     """
     try:
         # Initialize API client
@@ -111,7 +111,7 @@ def get_inputs_by_provider_source_from_api(provider_source: str) -> str:
         response = output_api.get_outputs_by_provider_source_using_get(source=provider_source)
         
         if not response:
-            return json.dumps({"status": "success", "message": "No outputs found for the specified provider source.", "outputs": []})
+            return json.dumps({"status": "success", "message": "No output types found for the specified provider source.", "outputs": []})
         
         # Format the response
         formatted_outputs = []
@@ -145,7 +145,7 @@ def get_inputs_by_provider_source_from_api(provider_source: str) -> str:
         return json.dumps({"status": "success", "count": len(formatted_outputs), "outputs": formatted_outputs}, indent=2)
     
     except Exception as e:
-        error_message = f"Error retrieving outputs by provider source: {str(e)}"
+        error_message = f"Error finding output types with provider: {str(e)}"
         print(error_message, file=sys.stderr)
         return json.dumps({"status": "error", "message": error_message})
 

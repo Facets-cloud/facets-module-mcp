@@ -54,24 +54,6 @@ run_ftf_generate_module(intent=..., flavor=..., cloud=..., title=..., descriptio
 
 ---
 
-Great catch. Here's the improved version of that part in **Step 3**, with clear guidance for the user about *
-*developer-centric** abstractions — including the note that inputs need not map 1:1 to Terraform arguments but should
-feel intuitive to developers.
-
----
-
-Perfect — you're aiming for a **semi-autonomous assistant** that intelligently **suggests developer-facing inputs**
-based on the abstraction style, but **still confirms** each suggestion before adding it.
-
-Here’s the improved Step 3 and 4 flow written for **LLMs** that:
-
-- Derives fields intelligently
-- Prefers intuitive abstractions if developer-centric
-- Shows suggested variables
-- Asks for approval (not raw info) before calling the tool
-
----
-
 ## 🔹 Step 3: Define the Abstraction Style
 
 Ask the user:

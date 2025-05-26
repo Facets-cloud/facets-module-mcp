@@ -31,6 +31,17 @@ inputs:
 This module expects to receive the `helm` provider configuration through the `kubernetes_cluster_details` output of
 another module.
 
+#### 🔍 Finding Compatible Output Types
+
+To find output types that provide a specific provider, use the `find_output_types_with_provider` function:
+
+```python
+# Example: Find all output types that provide the 'helm' provider
+find_output_types_with_provider('helm')
+```
+
+This function returns a JSON response containing all available output types that include the specified provider source. Use this to identify which `@outputs/<type>` values you can reference in your `inputs` configuration.
+
 ### ✅ How to Expose a Provider in a Facets Module
 
 To expose a provider for other modules to consume, declare it under the `outputs` section in your `facets.yaml`.

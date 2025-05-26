@@ -24,7 +24,7 @@ from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerA
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.output_utils import (
     get_output_type_details_from_api,
-    get_inputs_by_provider_source_from_api
+    find_output_types_with_provider_from_api
 )
 
 # Initialize client utility
@@ -235,19 +235,18 @@ def get_output_type_details(output_type: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def get_inputs_by_provider_source(provider_source: str) -> str:
+def find_output_types_with_provider(provider_source: str) -> str:
     """
-    Get inputs for input param provider source by calling the API method get_outputs_by_provider_source_using_get.
-    This tool retrieves all outputs that use a specific provider source which can be used as inputs for
+    This tool finds all output types that include a specific provider source, which can be used as inputs for
     module configurations.
     
     Args:
         provider_source (str): The provider source name to search for.
         
     Returns:
-        str: JSON string containing the formatted output information.
+        str: JSON string containing the formatted output type information.
     """
-    return get_inputs_by_provider_source_from_api(provider_source)
+    return find_output_types_with_provider_from_api(provider_source)
 
 
 @mcp.tool()
