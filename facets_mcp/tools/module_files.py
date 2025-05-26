@@ -4,6 +4,7 @@ import os
 import sys
 import json
 from typing import Optional, Dict, Any, List
+from pathlib import Path
 
 from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.file_utils import (
@@ -93,16 +94,21 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         return "Error: You must provide content for facets_yaml."
     
     try:
-        full_module_path = os.path.abspath(module_path)
-        if not full_module_path.startswith(os.path.abspath(working_directory)):
-            return "Error: Attempt to write files outside of the working directory."
+        # Normalize paths using Path for consistent handling across platforms
+        full_module_path = Path(module_path).resolve()
+        working_dir = Path(working_directory).resolve()
+        
+        # Check if the module path is within working directory
+        try:
+            full_module_path.relative_to(working_dir)
+        except ValueError:
+            return f"Error: Attempt to write files outside of the working directory. Module path: {full_module_path}, Working directory: {working_dir}"
 
         # Ensure module directory exists
-        if not os.path.exists(full_module_path):
-            os.makedirs(full_module_path, exist_ok=True)
+        full_module_path.mkdir(parents=True, exist_ok=True)
 
         # Run validation method on facets_yaml and module_path
-        validation_error = validate_yaml(module_path, facets_yaml)
+        validation_error = validate_yaml(str(full_module_path), facets_yaml)
 
         # Check for outputs and validate output types
         api_client = ClientUtils.get_client()
@@ -117,13 +123,12 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         current_facets_content = ""
 
         # Handle facets.yaml
-        facets_path = os.path.join(full_module_path, "facets.yaml")
+        facets_path = full_module_path / "facets.yaml"
 
         # Check if file exists and read its content
-        if os.path.exists(facets_path):
+        if facets_path.exists():
             try:
-                with open(facets_path, 'r') as f:
-                    current_facets_content = f.read()
+                current_facets_content = facets_path.read_text(encoding='utf-8')
             except Exception as e:
                 return f"Error reading existing facets.yaml: {str(e)}"
 
@@ -136,8 +141,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         # Write facets.yaml if not in dry run mode
         else:
             try:
-                with open(facets_path, 'w') as f:
-                    f.write(facets_yaml)
+                facets_path.write_text(facets_yaml, encoding='utf-8')
                 changes.append(f"Successfully wrote facets.yaml to {facets_path}")
             except Exception as e:
                 error_msg = f"Error writing facets.yaml: {str(e)}"
@@ -150,7 +154,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             
             result = {
                 "type": "dry_run",
-                "module_path": module_path,
+                "module_path": str(full_module_path),
                 "changes": changes,
                 "file_preview": file_preview,
                 "instructions": "Analyze the diff to identify variable definitions being added, modified, or removed. Present a clear summary to the user about what schema fields are changing. Ask the user explicitly if they want to proceed with these changes and wait for his input. Only if the user confirms, run the write_config_files function again with dry_run=False."
