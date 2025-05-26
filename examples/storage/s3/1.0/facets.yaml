@@ -36,7 +36,7 @@ spec:
   - enable_versioning
 inputs:
   aws_provider:
-    type: '@output/custom-aws-provider'
+    type: '@outputs/custom-aws-provider'
     providers:
     - aws
 outputs:

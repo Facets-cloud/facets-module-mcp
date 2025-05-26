@@ -7,7 +7,7 @@ Use these tags inside `spec.properties.<field>` of your module's `facets.yaml`. 
 ### 🔄 Dynamic Data Sources
 
 ```yaml
-x-ui-output-type: "@output/kubernetes_service"  # Select from modules exporting this output type. Use this when the field can be derived from another module reference
+x-ui-output-type: "@outputs/kubernetes_service"  # Select from modules exporting this output type. Use this when the field can be derived from another module reference
 ```
 
 ```yaml

@@ -106,7 +106,20 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
         if not output_api:
             return {"warning": "Output types not validated: API client not provided"}
         
-        # Check if output types exist in Facets control plane
+        # Get all outputs from the API in a single call
+        try:
+            all_existing_outputs = output_api.get_all_outputs_using_get()
+            # Create a set of existing output identifiers for fast lookup
+            existing_output_ids = set()
+            for output in all_existing_outputs:
+                if hasattr(output, 'name') and output.name:
+                    namespace = getattr(output, 'namespace', None) or 'outputs'
+                    existing_output_ids.add(f"@{namespace}/{output.name}")
+        except Exception as e:
+            print(f"Error fetching all outputs: {str(e)}", file=sys.stderr)
+            return {"error": f"Error fetching all outputs: {str(e)}"}
+        
+        # Check if output types exist in the fetched results
         missing_from_outputs = []
         missing_from_inputs = []
         
@@ -115,25 +128,13 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
             if not output_type.startswith('@') or '/' not in output_type:
                 continue
             
-            # Split the name into namespace and name parts
-            name_parts = output_type.split('/', 1)
-            if len(name_parts) != 2:
-                continue
-            
-            namespace, output_name = name_parts
-            
-            # Check if the output exists
-            try:
-                output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
-            except Exception as e:
-                if hasattr(e, 'status') and e.status == 404:
-                    # Determine which source this missing type comes from
-                    if output_type in output_types_from_outputs:
-                        missing_from_outputs.append(output_type)
-                    if output_type in output_types_from_inputs:
-                        missing_from_inputs.append(output_type)
-                else:
-                    print(f"Error checking output type {output_type}: {str(e)}", file=sys.stderr)
+            # Check if the output type exists in our fetched results
+            if output_type not in existing_output_ids:
+                # Determine which source this missing type comes from
+                if output_type in output_types_from_outputs:
+                    missing_from_outputs.append(output_type)
+                if output_type in output_types_from_inputs:
+                    missing_from_inputs.append(output_type)
         
         return {
             "missing_from_outputs": missing_from_outputs,
@@ -174,7 +175,7 @@ def check_missing_output_types(output_validation_results: Dict[str, Any]) -> Tup
     
     # Handle missing output types from outputs block
     if missing_from_outputs:
-        error_parts.append("Missing output types in 'outputs' block:")
+        error_parts.append("Validation failed: Missing output types in 'outputs' block:")
         error_parts.append("  These output types need to be registered first using register_output_type:")
         for output_type in missing_from_outputs:
             error_parts.append(f"  - {output_type}")
@@ -182,7 +183,7 @@ def check_missing_output_types(output_validation_results: Dict[str, Any]) -> Tup
     
     # Handle missing output types from inputs block
     if missing_from_inputs:
-        error_parts.append("Missing output types in 'inputs' block:")
+        error_parts.append("Validation failed: Missing output types in 'inputs' block:")
         error_parts.append("  These output types are expected from other modules that don't exist yet:")
         for output_type in missing_from_inputs:
             error_parts.append(f"  - {output_type}")
