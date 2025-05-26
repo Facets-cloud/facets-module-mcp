@@ -113,8 +113,15 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
             existing_output_ids = set()
             for output in all_existing_outputs:
                 if hasattr(output, 'name') and output.name:
-                    namespace = getattr(output, 'namespace', None) or 'outputs'
-                    existing_output_ids.add(f"@{namespace}/{output.name}")
+                    namespace = getattr(output, 'namespace', None) or '@outputs'
+                    output_id = f"{namespace}/{output.name}"
+                    existing_output_ids.add(output_id)
+
+                    # Add both @outputs and @output variants for compatibility
+                    if namespace == '@outputs':
+                        existing_output_ids.add(f"@output/{output.name}")
+                    elif namespace == '@output':
+                        existing_output_ids.add(f"@outputs/{output.name}")
         except Exception as e:
             print(f"Error fetching all outputs: {str(e)}", file=sys.stderr)
             return {"error": f"Error fetching all outputs: {str(e)}"}
