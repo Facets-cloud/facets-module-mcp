@@ -138,6 +138,14 @@ For a comprehensive example of how to use this MCP server with Claude, check out
 This example demonstrates the complete workflow from module generation to testing and deployment.
 
 ---
+## 📘 Additional Guide
+
+For a detailed, real-world walkthrough of building a secure S3 bucket module with AI on the Facets platform, check out  
+**[GUIDE.md – Building Facets Modules with AI: A Practical Guide](./GUIDE.md)**
+
+This guide demonstrates the full conversation flow—requirements, design refinement, implementation review, validation, testing, and iteration—using a developer-focused example tailored for a banking use case.
+
+---
 
 ## License
 
