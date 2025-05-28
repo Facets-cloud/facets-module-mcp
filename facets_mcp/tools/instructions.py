@@ -58,8 +58,6 @@ def FIRST_STEP_get_instructions() -> str:
     supplementary_dir = os.path.join(working_dir, "facets-module-mcp_instructions")
     supplementary_instructions = read_markdown_files(supplementary_dir)
 
-    instructions["supplementary_instructions"] = supplementary_instructions
-
     # Add supplementary instructions with prefix to distinguish them
     for filename, content in supplementary_instructions.items():
         instructions[f"supplementary_{filename}"] = content
