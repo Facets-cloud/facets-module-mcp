@@ -49,7 +49,16 @@ def list_files_in_directory(module_path: str, working_directory: str) -> list:
         print(f"Error accessing module path {module_path}: {e}")
     return file_list
 
-def read_file(file_path: str) -> str:
+def get_file_content(file_path: str) -> str:
+    """
+    Reads the content of a file with robust error handling.
+
+    Args:
+        file_path (str): The absolute path to the file to read.
+
+    Returns:
+        str: The file’s content, or a descriptive error message if reading fails.
+    """
     try:
         with open(file_path, 'r') as f:
             return f.read()
@@ -73,7 +82,7 @@ def read_file_content(file_path: str, working_directory: str) -> str:
         str: The content of the file.
     """
     full_file_path = ensure_path_in_working_directory(file_path, working_directory)
-    return read_file(full_file_path)
+    return get_file_content(full_file_path)
 
 
 def generate_file_previews(new_content: str, current_content: Optional[str] = None):

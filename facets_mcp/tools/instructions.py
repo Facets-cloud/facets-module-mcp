@@ -2,7 +2,7 @@ import os
 import json
 from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.file_utils import (
-    read_file
+    get_file_content
 )
 from pathlib import Path
 
@@ -40,7 +40,7 @@ def FIRST_STEP_get_instructions() -> str:
                 for filename in os.listdir(directory_path):
                     if filename.endswith(".md"):
                         file_path = os.path.join(directory_path, filename)
-                        files_content[filename] = read_file(file_path)
+                        files_content[filename] = get_file_content(file_path)
         except Exception as e:
             files_content = { "error": str(e) }
 
