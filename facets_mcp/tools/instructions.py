@@ -17,7 +17,7 @@ def FIRST_STEP_get_instructions() -> str:
     <important>ALWAYS Call this tool first before calling any other tool of this mcp.</important>
     Loads all module writing instructions for Facets module development found in the
     `module_instructions` directory and supplementary instructions from the
-    `facets-module-mcp_instructions` directory at the root level of the working directory.
+    `mcp_instructions` directory at the root level of the working directory.
 
     Returns:
         str: A JSON string containing the content of all instruction files,
@@ -53,9 +53,9 @@ def FIRST_STEP_get_instructions() -> str:
     # Read all markdown files in the directory (using helper function)
     instructions.update(read_markdown_files(base_dir))
 
-    # Read supplementary instructions from facets-module-mcp_instructions directory
+    # Read supplementary instructions from mcp_instructions directory
     working_dir = Path(working_directory).resolve()
-    supplementary_dir = os.path.join(working_dir, "facets-module-mcp_instructions")
+    supplementary_dir = os.path.join(working_dir, "mcp_instructions")
     supplementary_instructions = read_markdown_files(supplementary_dir)
 
     # Add supplementary instructions with prefix to distinguish them
