@@ -42,7 +42,7 @@ def FIRST_STEP_get_instructions() -> str:
                         file_path = os.path.join(directory_path, filename)
                         files_content[filename] = get_file_content(file_path)
         except Exception as e:
-            files_content = { "error": str(e) }
+            files_content["_error"] = f"Error reading directory {directory_path}: {str(e)}"
 
         return files_content
 
