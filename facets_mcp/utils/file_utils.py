@@ -8,7 +8,6 @@ import sys
 import difflib
 from typing import Optional, Dict, Any
 
-
 def ensure_path_in_working_directory(path: str, working_directory: str) -> str:
     """
     Ensure a file path is within the working directory.
@@ -50,6 +49,26 @@ def list_files_in_directory(module_path: str, working_directory: str) -> list:
         print(f"Error accessing module path {module_path}: {e}")
     return file_list
 
+def get_file_content(file_path: str) -> str:
+    """
+    Reads the content of a file with robust error handling.
+
+    Args:
+        file_path (str): The absolute path to the file to read.
+
+    Returns:
+        str: The file’s content, or a descriptive error message if reading fails.
+    """
+    try:
+        with open(file_path, 'r') as f:
+            return f.read()
+    except OSError as e:
+        print(f"Error reading file {file_path}: {e}")
+        return "Error reading file."
+    except Exception as file_error:
+        error_message = f"Could not read file: {str(file_error)}"
+        print(error_message)
+        return error_message
 
 def read_file_content(file_path: str, working_directory: str) -> str:
     """
@@ -63,12 +82,7 @@ def read_file_content(file_path: str, working_directory: str) -> str:
         str: The content of the file.
     """
     full_file_path = ensure_path_in_working_directory(file_path, working_directory)
-    try:
-        with open(full_file_path, 'r') as f:
-            return f.read()
-    except OSError as e:
-        print(f"Error reading file {file_path}: {e}")
-        return "Error reading file."
+    return get_file_content(full_file_path)
 
 
 def generate_file_previews(new_content: str, current_content: Optional[str] = None):

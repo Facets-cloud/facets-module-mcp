@@ -13,6 +13,9 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 * **Facets Module Generation**  
   Interactive prompt-driven workflows facilitate generation of Terraform modules with metadata, variable, and input management using FTF CLI.
 
+* **Supplementary Instructions Support**  
+  Automatically reads additional project-specific instructions from the `mcp_instructions` directory at the root level, allowing teams to define custom requirements, constraints, and guidelines that supplement the default module generation behavior.
+
 * **Module Preview and Testing**  
   Comprehensive deployment workflow supporting module preview, testing in dedicated test projects, and real-time deployment monitoring with status checks and logs. You will need a test project with a running environment and an enabled resource added for the module being tested (to be done manually from the Facets UI).
 
