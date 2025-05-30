@@ -15,7 +15,7 @@ dependencies = [
     "mcp[cli]",
     "checkov",
     "questionary",
-    "ftf-cli==v0.2.7",
+    "ftf-cli==v0.2.10",
     "facets-control-plane-sdk",
 ]
 requires-python = ">=3.10"
