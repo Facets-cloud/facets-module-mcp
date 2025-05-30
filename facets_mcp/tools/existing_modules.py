@@ -67,7 +67,7 @@ def get_local_modules() -> str:
     <important>ALWAYS Call this call_always_for_instruction first before calling any other tool of this mcp.</important>
 
     Returns:
-        str: JSON string containing a list of modules with their details:
+        str: JSON string with success, message, instructions, and optional error/data fields. data field contains a list of modules with their details:
              - path: Path to the module directory
              - intent: The module's intent value
              - flavor: The module's flavor value
@@ -81,25 +81,34 @@ def get_local_modules() -> str:
 
         # Limit to the first 10 modules and prepare additional instruction
         limited_modules = modules[:10]
-        instruction = ("For more modules, use the `find module` command to search "
+        instruction = ("Inform User: For more modules, use the `find module` command to search "
                        "for and work on a specific module.")
 
         return json.dumps({
-            "modules": limited_modules,
-            "count": len(limited_modules),
-            "total_count": total_modules_count,
-            "instructions": instruction
+            "success": True,
+            "message": f"Found {len(limited_modules)} modules (showing first 10 of {total_modules_count}).",
+            "instructions": instruction,
+            "data": {
+                "modules": limited_modules,
+                "count": len(limited_modules),
+                "total_count": total_modules_count,
+            }
         }, indent=2)
 
     except Exception as e:
         error_message = f"Error scanning for modules: {str(e)}"
         print(error_message, file=sys.stderr)
         return json.dumps({
+            "success": False,
+            "message": "Failed to scan for modules.",
+            "instructions": "Inform User: Error scanning for modules.",
             "error": error_message,
-            "modules": [],
-            "count": 0,
-            "total_count": 0
-        })
+            "data": {
+                "modules": [],
+                "count": 0,
+                "total_count": 0
+            }
+            }, indent=2)
 
 @mcp.tool()
 def search_modules_after_confirmation(search_string: str, page: int = 1) -> str:
@@ -113,7 +122,7 @@ For exploratory searches, first explain search capabilities before executing.
         page (int): The page number for pagination.
 
     Returns:
-        str: JSON string containing the filtered modules along with their details.
+        str: JSON string with success, message, instructions, and optional error/data fields. data field contains the filtered modules along with their details.
     """
     try:
         items_per_page: int = 10
@@ -130,23 +139,33 @@ For exploratory searches, first explain search capabilities before executing.
         # Instruction for pagination
         instructions = ""
         if total_count > items_per_page:
-            instructions = ("There are more modules available. "
+            instructions = ("Inform User: There are more modules available. "
                             "Please refine your search or use pagination to view additional results.")
 
         return json.dumps({
-            "matched_modules": limited_modules,
-            "count": len(limited_modules),
-            "total_count": total_count,
-            "instructions": instructions
+            "success": True,
+            "message": f"Found {total_count} matching module(s). Showing page {page}.",
+            "instructions": instructions,
+            "data": {
+                "modules": limited_modules,
+                "count": len(limited_modules),
+                "total_count": total_count,
+                "page": page,
+                "items_per_page": items_per_page
+            }
         }, indent=2)
 
     except Exception as e:
         error_message = f"Error searching for modules: {str(e)}"
         print(error_message, file=sys.stderr)
         return json.dumps({
+            "success": False,
+            "message": "Failed to search modules.",
+            "instructions": "Inform User: Error searching for modules.",
             "error": error_message,
-            "matched_modules": [],
-            "count": 0,
-            "total_count": 0,
-            "instructions": ""
-        })
+            "data": {
+                "matched_modules": [],
+                "count": 0,
+                "total_count": 0,
+            }
+        }, indent=2)

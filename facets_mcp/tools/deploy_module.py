@@ -24,7 +24,22 @@ def list_test_projects() -> str:
     api_instance = UiStackControllerApi(ClientUtils.get_client())
     stacks = api_instance.get_stacks_using_get1()
     stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
-    return stack_names if stack_names else "No test projects found. Ask the user to create one from the Facets UI."
+    if stack_names:
+        return json.dumps({
+            "success": True,
+            "message": "Succesfully retrieved the names of all available test projects.",
+            "instructions": f"Inform User: Choose a test project from the project list.",
+            "data": {
+                "project_list": stack_names
+            }
+        }, indent=2)
+    else:
+        return json.dumps({
+            "success": False,
+            "message": "Failed to retrieve names of all available test projects.",
+            "instructions": f"Inform User: No test projects were found.",
+            "error": "No test projects found."
+        }, indent=2)
 
 
 @mcp.tool()
@@ -60,19 +75,25 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
+                    "message": f"Project '{project_name}' does not allow preview modules.",
+                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project.",
+                    "error": f"Project '{project_name}' does not allow preview modules.",
                 }, indent=2)
 
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not exist."
+                    "message": f"Project '{project_name}' does not exist.",
+                    "instructions": f"Inform User: Project '{project_name}' does not exist.",
+                    "error": f"Project does not exist: {str(e)}",
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Error accessing project '{project_name}': {str(e)}"
+                    "message": f"Error accessing project '{project_name}'.",
+                    "instructions": f"Inform User: Error accessing project '{project_name}'",
+                    "error": str(e),
                 }, indent=2)
 
         # Step 2: Get the running environments (clusters) of the project
@@ -83,14 +104,18 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not running_clusters:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first."
+                    "message": f"No running environments found in project '{project_name}'.",
+                    "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first.",
+                    "error": f"No running environments found in project '{project_name}'.",
                 }, indent=2)
 
             if len(running_clusters) > 1:
                 cluster_names = [c.cluster.name for c in running_clusters]
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User:  Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
+                    "message": f"Multiple running environments found: {', '.join(cluster_names)}.",
+                    "instructions": f"Inform User:  Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment.",
+                    "error": f"Multiple running environments found: {', '.join(cluster_names)}.",
                 }, indent=2)
 
             # Get the cluster ID of the single running cluster
@@ -100,7 +125,9 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "instructions": f"Inform User: Error getting environment information for '{project_name}': {str(e)}"
+                "message": f"Error getting environment information for '{project_name}'.",
+                "instructions": f"Inform User: Error getting environment information for '{project_name}'",
+                "error": str(e),
             }, indent=2)
 
         # Step 3: Get all resources for the cluster
@@ -122,13 +149,17 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not matching_resources:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
+                    "message": f"No matching resource found with intent='{intent}', flavor='{flavor}', version='{version}' in the running environment.",
+                    "instructions": f"Inform User: No matching resource with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment.",
+                    "error": f"No matching resource found with intent='{intent}', flavor='{flavor}', version='{version}' in the running environment.",
                 }, indent=2)
 
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "instructions": f"Inform User: Error retrieving resources for environment '{cluster_id}': {str(e)}"
+                "message": f"Error retrieving resources for environment '{cluster_id}'.",
+                "instructions": f"Inform User: Error retrieving resources for environment '{cluster_id}'",
+                "error": str(e),
             }, indent=2)
 
         # Step 4: Deploy the module by triggering hotfix deployment
@@ -164,23 +195,33 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             return json.dumps({
                 "success": True,
                 "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
-                "resources_deployed": len(matching_resources),
-                "resource_names": resource_names,
-                "deployment_id": deployment_id,
-                "status": initial_status,
-                "cluster_id": cluster_id,
-                "check_status_command": f"check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}')"
+                "instructions": f"Inform User: Use check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}') to monitor progress.",
+                "data": {
+                    "resources_deployed": len(matching_resources),
+                    "resource_names": resource_names,
+                    "deployment_id": deployment_id,
+                    "status": initial_status,
+                    "cluster_id": cluster_id,
+                    "cluster_name": cluster_name,
+                    "project_name": project_name
+                }
             }, indent=2)
 
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "instructions": f"Inform User: Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}': {str(e)}"
+                "message": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}'.",
+                "instructions": f"Inform User: Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}'",
+                "error": str(e),
             }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in test_already_previewed_module tool: {str(e)}"
-        return json.dumps({"success": False, "instructions:": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "message": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{project_name}'.",
+            "instructions": f"Inform User: Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{project_name}'.",
+            "error": f"Error in test_already_previewed_module tool: {str(e)}",
+        }, indent=2)
 
 
 @mcp.tool()
@@ -219,16 +260,17 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 # Return immediately if not waiting or if already complete
                 return json.dumps({
                     "success": True,
-                    "status": deployment.status,
-                    "deployment_id": deployment_id,
-                    "cluster_id": cluster_id,
-                    "started_at": deployment.created_at.isoformat() if hasattr(deployment,
-                                                                               'created_at') and deployment.created_at else None,
-                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
-                                                                                   'completed_at') and deployment.completed_at else None,
-                    "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                     "message": f"Deployment {deployment.status}",
-                    "elapsed_seconds": elapsed_time,
+                    "instructions": f"Inform User: Deployment {deployment.status}",
+                    "data": {
+                        "status": deployment.status,
+                        "deployment_id": deployment_id,
+                        "cluster_id": cluster_id,
+                        "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
+                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                        "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
+                        "elapsed_seconds": elapsed_time,
+                    },
                 }, indent=2)
 
             # If we're waiting, poll until completion or timeout
@@ -249,8 +291,14 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 except ApiException as e:
                     return json.dumps({
                         "success": False,
+                        "message": "Error occurred while polling deployment status.",
+                        "instructions": f"Inform User: Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}. Error occurred while polling deployment status.",
                         "error": f"Error checking deployment status: {str(e)}",
-                        "elapsed_seconds": elapsed_time,
+                        "data": {
+                            "deployment_id": deployment_id,
+                            "cluster_id": cluster_id,
+                            "elapsed_seconds": elapsed_time,
+                        },
                     }, indent=2)
 
             # Check if we timed out
@@ -258,43 +306,57 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                     deployment.status == "IN_PROGRESS" or deployment.status == "STARTED"):
                 return json.dumps({
                     "success": False,
-                    "status": deployment.status,
+                    "message": f"Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}",
+                    "instructions": f"Inform User: Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}. Timed out after {timeout_seconds} seconds.",
                     "error": f"Timed out after {timeout_seconds} seconds. Deployment still in progress.",
-                    "deployment_id": deployment_id,
-                    "cluster_id": cluster_id,
-                    "elapsed_seconds": elapsed_time,
+                    "data": {
+                        "status": deployment.status,
+                        "deployment_id": deployment_id,
+                        "cluster_id": cluster_id,
+                        "elapsed_seconds": elapsed_time,
+                    },
                 }, indent=2)
 
             # Deployment completed (either successfully or with failure)
             return json.dumps({
                 "success": deployment.status == "SUCCEEDED",
-                "status": deployment.status,
-                "deployment_id": deployment_id,
-                "cluster_id": cluster_id,
-                "started_at": deployment.created_at.isoformat() if hasattr(deployment,
-                                                                           'created_at') and deployment.created_at else None,
-                "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
-                                                                               'completed_at') and deployment.completed_at else None,
-                "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                 "message": f"Deployment {deployment.status}",
-                "elapsed_seconds": elapsed_time,
+                "instructions": f"Inform User: Deployment {deployment.status}",
+                "errors" : None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
+                "data": {
+                    "status": deployment.status,
+                    "deployment_id": deployment_id,
+                    "cluster_id": cluster_id,
+                    "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
+                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                    "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
+                    "elapsed_seconds": elapsed_time,
+                },
             }, indent=2)
 
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
+                    "message": f"Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}",
+                    "instructions": f"Inform User: Verify the deployment ID.",
                     "error": f"Deployment not found: {deployment_id}",
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
+                    "message": f"API error while retrieving deployment status.",
+                    "instructions": f"Inform User: API error while retrieving deployment status.",
                     "error": f"Error checking deployment status: {str(e)}",
                 }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in check_deployment_status tool: {str(e)}"
-        return json.dumps({"success": False, "error": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "message": f"Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}",
+            "instructions": f"Inform User: Failed to check status of deployment with cluster ID {cluster_id} and deployment ID {deployment_id}. Error in check_deployment_status tool.",
+            "error": f"Error in check_deployment_status tool: {str(e)}",
+        }, indent=2)
 
 
 @mcp.tool()
@@ -343,25 +405,37 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
             return json.dumps({
                 "success": True,
-                "deployment_id": deployment_id,
-                "cluster_id": cluster_id,
-                "status": status,
-                "log_count": len(formatted_logs),
-                "logs": formatted_logs
+                "message": f"Successfully retrieved logs for deployment {deployment_id}.",
+                "instructions": f"Inform User: Successfully retrieved logs for deployment {deployment_id}.",
+                "data": {
+                    "deployment_id": deployment_id,
+                    "cluster_id": cluster_id,
+                    "status": status,
+                    "log_count": len(formatted_logs),
+                    "logs": formatted_logs
+                }
             }, indent=2)
 
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
+                    "message": f"Failed to retrieve logs for deployment {deployment_id}",
+                    "instructions": f"Inform User: Verify the deployment ID.",
                     "error": f"Deployment not found: {deployment_id}",
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
+                    "message": "Failed to retrieve deployment logs.",
+                    "instructions": f"Inform User: Failed to retrieve deployment logs.",
                     "error": f"Error getting deployment logs: {str(e)}",
                 }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in get_deployment_logs tool: {str(e)}"
-        return json.dumps({"success": False, "error": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "message": f"Failed to get logs for deployment with cluster ID {cluster_id} and deployment ID {deployment_id}.",
+            "instructions": f"Inform User: Failed to get logs for deployment with cluster ID {cluster_id} and deployment ID {deployment_id}. Error in get_deployment_logs tool.",
+            "error": f"Error in get_deployment_logs tool: {str(e)}",
+        }, indent=2)

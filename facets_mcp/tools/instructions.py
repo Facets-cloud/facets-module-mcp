@@ -62,4 +62,10 @@ def FIRST_STEP_get_instructions() -> str:
     for filename, content in supplementary_instructions.items():
         instructions[f"supplementary_{filename}"] = content
 
-    return json.dumps(instructions, indent=2)
+    return json.dumps({
+        "success": True,
+        "message": "Instructions loaded successfully.",
+        "instructions": "Inform User: Instructions loaded successfully.",
+        "data": instructions
+    }, indent=2)
+
