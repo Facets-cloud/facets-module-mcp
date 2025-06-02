@@ -52,10 +52,6 @@ def list_files(module_path: str) -> str:
         return json.dumps({
             "success": True,
             "message": f"Successfully listed files in '{module_path}'.",
-            "instructions": (
-                "Inform User: The files have been listed."
-                "Ask User: Would you like to add any variables or use any other FTF commands?"
-            ),
             "data": {"files": file_list}
         }, indent=2)
     except Exception as e:
@@ -88,7 +84,6 @@ def read_file(file_path: str) -> str:
         return json.dumps({
             "success": True,
             "message": "File read successfully.",
-            "instructions": "Inform User: The file content has been retrieved.",
             "data": {
                 "file_content": file_content
             }
@@ -131,7 +126,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         return json.dumps({
             "success": False,
             "message": "No content provided for facets_yaml.",
-            "instructions": "Inform User: Please provide valid content for facets_yaml before proceeding.",
+            "instructions": "Please provide valid content for facets_yaml before proceeding.",
             "error": "facets_yaml argument is empty."
         }, indent=2)
 
@@ -155,13 +150,21 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         full_module_path.mkdir(parents=True, exist_ok=True)
 
         # Run validation method on facets_yaml and module_path
-        validation_error = validate_yaml(str(full_module_path), facets_yaml)
-        if validation_error:
+        try:
+            validation_result = validate_yaml(str(full_module_path), facets_yaml)
+            if validation_result.startswith("Error executing command"):
+                return json.dumps({
+                    "success": False,
+                    "message": "facets.yaml validation failed.",
+                    "instructions": "Please correct the errors in facets.yaml and try again.",
+                    "error": validation_result
+                }, indent=2)
+        except Exception as e:
             return json.dumps({
                 "success": False,
                 "message": "facets.yaml validation failed.",
-                "instructions": "Inform User: Please correct the errors in facets.yaml and try again.",
-                "error": validation_error
+                "instructions": "Inform User: facets.yaml validation failed.",
+                "error": str(e)
             }, indent=2)
 
         # Check for outputs and validate output types
@@ -174,7 +177,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             return json.dumps({
                 "success": False,
                 "message": "Output type validation failed.",
-                "instructions": "Inform User: Please fix the missing or invalid output types before proceeding.",
+                "instructions": "Please fix the missing or invalid output types before proceeding.",
                 "error": error_message
             }, indent=2)
 
@@ -351,7 +354,6 @@ def get_output_type_details(output_type: str) -> str:
     return json.dumps({
         "success": True,
         "message": f"Successfully retrieved output type '{output_type}'.",
-        "instructions": f"Inform User: Successfully retrieved details for output type '{output_type}'.",
         "data": result
     }, indent=2)
 
@@ -376,7 +378,6 @@ def find_output_types_with_provider(provider_source: str) -> str:
         return json.dumps({
             "success": True,
             "message": f"Found {len(outputs)} output type(s) for provider source '{provider_source}'.",
-            "instructions": f"Inform User: Found {len(outputs)} output type(s) for provider source '{provider_source}'.",
             "data": {
                 "outputs": outputs,
                 "count": len(outputs)
@@ -521,7 +522,6 @@ def write_readme_file(module_path: str, content: str) -> str:
         return json.dumps({
             "success": True,
             "message": f"Successfully wrote README.md to {readme_path}",
-            "instructions": "Inform User: Successfully wrote README.md",
             "data": {
                 "readme_path": readme_path
             }

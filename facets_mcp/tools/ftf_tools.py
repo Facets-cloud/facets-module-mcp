@@ -340,15 +340,17 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
         command.extend(["-g", git_repo_url])
         command.extend(["-r", git_ref])
 
+        message = run_ftf_command(command)
+
         return json.dumps({
             "success": True,
-            "message": "Module preview successfully pushed to the control plane.",
+            "message": message,
         }, indent=2)
 
     except Exception as e:
         return json.dumps({
             "success": False,
             "message": "Failed to push module preview to the control plane.",
-            "instructions": "Inform User: Check that the Git configuration is correct and the FTF CLI is available.",
+            "instructions": "Inform User: Failed to push module preview to the control plane.",
             "error": str(e)
         }, indent=2)
