@@ -73,14 +73,11 @@ def get_file_content(file_path: str) -> str:
                     return f.read()
             except UnicodeDecodeError:
                 error_message = f"Could not read file with any supported encoding: {str(e)}"
-                print(error_message)
                 return error_message
     except OSError as e:
-        print(f"Error reading file {file_path}: {e}")
-        return "Error reading file."
+        return f"Error reading file {file_path}: {e}."
     except Exception as file_error:
         error_message = f"Could not read file: {str(file_error)}"
-        print(error_message)
         return error_message
 
 def read_file_content(file_path: str, working_directory: str) -> str:
