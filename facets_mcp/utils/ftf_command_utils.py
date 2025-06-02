@@ -32,7 +32,7 @@ def run_ftf_command(command: List[str]) -> str:
     result = runner.invoke(cli, command[1:])
 
     if result.exit_code != 0:
-        raise Exception(f"Error executing command: {result.output}")
+        raise Exception(f"{result.output}")
 
     output_message = result.output
     return output_message

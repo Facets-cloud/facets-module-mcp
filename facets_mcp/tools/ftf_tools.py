@@ -286,13 +286,10 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
         }, indent=2)
 
     except Exception as e:
-        error_message = f"Error validating module directory: {str(e)}"
-        print(error_message, file=sys.stderr)
         return json.dumps({
             "success": False,
-            "message": "Exception occurred during module validation.",
-            "instructions": "Inform User: Failed to validate module directory using FTF CLI.",
-            "error": error_message
+            "instructions": "Module validation failed. Try to resolve the error if possible and retry, otherwise inform the user.",
+            "error": str(e)
         }, indent=2)
 
 
@@ -339,7 +336,6 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
     except Exception as e:
         return json.dumps({
             "success": False,
-            "message": "Failed to push module preview to the control plane.",
-            "instructions": "Inform User: Failed to push module preview to the control plane.",
+            "instructions": "Try to resolve the error if possible, otherwise inform the user: Failed to push module preview to the control plane.",
             "error": str(e)
         }, indent=2)
