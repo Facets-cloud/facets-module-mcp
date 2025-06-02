@@ -233,7 +233,6 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             return json.dumps({
                 "success": True,
                 "message": "facets.yaml was successfully written.",
-                "instructions": "Inform User: facets.yaml has been written.",
                 "data": {
                     "module_path": str(full_module_path),
                     "changes": '\n'.join(changes)
@@ -268,8 +267,12 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
     """
     try:
         if file_name == "outputs.tf" or file_name == "output.tf":
-            return ("Error: Writing 'outputs.tf' is not allowed through this function. "
-                    "Please use the write_outputs() tool instead.")
+            return json.dumps({
+                "success": False,
+                "message": "Writing 'outputs.tf' is not allowed through this function.",
+                "instructions": "Inform User: Please use the write_outputs() tool instead.",
+                "error": "Writing 'outputs.tf' is not allowed through write_resource_file."
+            }, indent=2)
 
         # Validate inputs
         if not file_name.endswith(".tf") and not file_name.endswith(".tf.tmpl"):
@@ -309,7 +312,6 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         return json.dumps({
             "success": True,
             "message": f"Successfully wrote {file_name} to {file_path}",
-            "instructions": "Inform User: The file has been written.",
             "data": {
                 "file_path": file_path,
                 "file_name": file_name
@@ -475,7 +477,6 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
         return json.dumps({
             "success": True,
             "message": f"Successfully wrote outputs.tf to {file_path}",
-            "instructions": "Inform User: outputs.tf has been written.",
         }, indent=2)
 
     except Exception as e:
