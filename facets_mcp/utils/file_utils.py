@@ -60,8 +60,21 @@ def get_file_content(file_path: str) -> str:
         str: The file’s content, or a descriptive error message if reading fails.
     """
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
+    except UnicodeDecodeError as e:
+        # Try with different encodings if UTF-8 fails
+        try:
+            with open(file_path, 'r', encoding='utf-8-sig') as f:
+                return f.read()
+        except UnicodeDecodeError:
+            try:
+                with open(file_path, 'r', encoding='cp1252') as f:
+                    return f.read()
+            except UnicodeDecodeError:
+                error_message = f"Could not read file with any supported encoding: {str(e)}"
+                print(error_message)
+                return error_message
     except OSError as e:
         print(f"Error reading file {file_path}: {e}")
         return "Error reading file."
@@ -161,7 +174,7 @@ def write_file_safely(file_path: str, content: str, working_directory: str) -> s
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(full_file_path), exist_ok=True)
         
-        with open(full_file_path, 'w') as f:
+        with open(full_file_path, 'w', encoding='utf-8') as f:
             f.write(content)
             
         return f"Successfully wrote file to {file_path}"
