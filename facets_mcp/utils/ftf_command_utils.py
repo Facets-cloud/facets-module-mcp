@@ -28,13 +28,11 @@ def run_ftf_command(command: List[str]) -> str:
 
     runner = CliRunner()
 
-    # Remove starting 'ftf' from command to align with Click command structure
+    # Remove starting 'ftf' from command to align with the Click command structure
     result = runner.invoke(cli, command[1:])
 
     if result.exit_code != 0:
-        error_message = f"Error executing command: {result.output}"
-        print(error_message, file=sys.stderr)
-        return error_message
+        raise Exception(f"{result.output}")
 
     output_message = result.output
     return output_message

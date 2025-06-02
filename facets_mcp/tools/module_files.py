@@ -1,30 +1,29 @@
 # This file contains utility functions for handling module files
 
+import json
 import os
 import sys
-import json
-from typing import Optional, Dict, Any, List
 from pathlib import Path
 
+from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+
 from facets_mcp.config import mcp, working_directory
+from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.file_utils import (
-    list_files_in_directory, 
-    read_file_content, 
+    list_files_in_directory,
+    read_file_content,
     generate_file_previews,
-    write_file_safely,
     ensure_path_in_working_directory
 )
-from facets_mcp.utils.yaml_utils import (
-    validate_yaml, 
-    validate_output_types, 
-    check_missing_output_types,
-    read_and_validate_facets_yaml
-)
-from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
-from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.output_utils import (
     get_output_type_details_from_api,
     find_output_types_with_provider_from_api
+)
+from facets_mcp.utils.yaml_utils import (
+    validate_yaml,
+    validate_output_types,
+    check_missing_output_types,
+    read_and_validate_facets_yaml
 )
 
 # Initialize client utility
@@ -36,7 +35,7 @@ except Exception as e:
 
 
 @mcp.tool()
-def list_files(module_path: str) -> list:
+def list_files(module_path: str) -> str:
     """
     Lists all files in the given module path, ensuring we stay within the working directory.
     Always ask User if he wants to add any variables or use any other FTF commands
@@ -45,9 +44,25 @@ def list_files(module_path: str) -> list:
         module_path (str): The path to the module directory.
 
     Returns:
-        list: A list of file paths (strings) found in the module directory.
+        str: A JSON-formatted string with operation details and file list found in module directory.
     """
-    return list_files_in_directory(module_path, working_directory)
+    try:
+        file_list = list_files_in_directory(module_path, working_directory)
+        return json.dumps({
+            "success": True,
+            "message": f"Successfully listed files in '{module_path}'.",
+            "data": {"files": file_list}
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "message": f"Failed to list files in '{module_path}'.",
+            "instructions": (
+                "Inform User: There was an error listing the files."
+                "Ask User: Would you like to try a different path?"
+            ),
+            "error": str(e)
+        }, indent=2)
 
 
 @mcp.tool()
@@ -60,9 +75,25 @@ def read_file(file_path: str) -> str:
         file_path (str): The path to the file.
 
     Returns:
-        str: The content of the file.
+        str: JSON formatted response with file content or error information.
     """
-    return read_file_content(file_path, working_directory)
+    try:
+        # Assuming working_directory is defined elsewhere in your code
+        file_content = read_file_content(file_path, working_directory)
+        return json.dumps({
+            "success": True,
+            "message": "File read successfully.",
+            "data": {
+                "file_content": file_content
+            }
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "message": "Failed to read the file.",
+            "instructions": "Inform User: An error occurred while reading the file. Please check the file path.",
+            "error": str(e)
+        }, indent=2)
 
 
 @mcp.tool()
@@ -91,8 +122,13 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         str: Success message, diff preview (if dry_run=True), or error message.
     """
     if not facets_yaml:
-        return "Error: You must provide content for facets_yaml."
-    
+        return json.dumps({
+            "success": False,
+            "message": "No content provided for facets_yaml.",
+            "instructions": "Please provide valid content for facets_yaml before proceeding.",
+            "error": "facets_yaml argument is empty."
+        }, indent=2)
+
     try:
         # Normalize paths using Path for consistent handling across platforms
         full_module_path = Path(module_path).resolve()
@@ -102,13 +138,26 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         try:
             full_module_path.relative_to(working_dir)
         except ValueError:
-            return f"Error: Attempt to write files outside of the working directory. Module path: {full_module_path}, Working directory: {working_dir}"
+            return json.dumps({
+                "success": False,
+                "message": "Module path is outside the working directory.",
+                "instructions": "Inform User: Please provide a valid module path within the working directory.",
+                "error": f"Attempt to write files outside of the working directory. Module path: {full_module_path}, Working directory: {working_dir}",
+            }, indent=2)
 
         # Ensure module directory exists
         full_module_path.mkdir(parents=True, exist_ok=True)
 
         # Run validation method on facets_yaml and module_path
-        validation_error = validate_yaml(str(full_module_path), facets_yaml)
+        try:
+            validate_yaml(str(full_module_path), facets_yaml)
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "message": "facets.yaml validation failed.",
+                "instructions": "Fix the facets.yaml file and try again.",
+                "error": str(e)
+            }, indent=2)
 
         # Check for outputs and validate output types
         api_client = ClientUtils.get_client()
@@ -117,7 +166,12 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         
         has_missing_types, error_message = check_missing_output_types(output_validation_results)
         if has_missing_types:
-            return error_message
+            return json.dumps({
+                "success": False,
+                "message": "Output type validation failed.",
+                "instructions": "Register the missing output types first and try again.",
+                "error": error_message
+            }, indent=2)
 
         changes = []
         current_facets_content = ""
@@ -130,7 +184,12 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             try:
                 current_facets_content = facets_path.read_text(encoding='utf-8')
             except Exception as e:
-                return f"Error reading existing facets.yaml: {str(e)}"
+                return json.dumps({
+                    "success": False,
+                    "message": "Failed to read existing facets.yaml.",
+                    "instructions": "Inform User: Failed to read existing facets.yaml.",
+                    "error": str(e)
+                }, indent=2)
 
         # Generate diff for facets.yaml
         if dry_run:
@@ -151,23 +210,36 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
         if dry_run:
             # Create structured output with JSON
             file_preview = generate_file_previews(facets_yaml, current_facets_content)
-            
-            result = {
-                "type": "dry_run",
-                "module_path": str(full_module_path),
-                "changes": changes,
-                "file_preview": file_preview,
-                "instructions": "Analyze the diff to identify variable definitions being added, modified, or removed. Present a clear summary to the user about what schema fields are changing. Ask the user explicitly if they want to proceed with these changes and wait for his input. Only if the user confirms, run the write_config_files function again with dry_run=False."
-            }
-            
-            return json.dumps(result, indent=2)
+            return json.dumps({
+                "success": True,
+                "message": "Dry run completed. No files were written.",
+                "instructions": "Analyze the diff to identify variable definitions being added, modified, or removed. Present a clear summary to the user about what schema fields are changing. Ask the user explicitly if they want to proceed with these changes and wait for his input. Only if the user confirms, run the write_config_files function again with dry_run=False.",
+                "data": {
+                    "type": "dry_run",
+                    "module_path": str(full_module_path),
+                    "changes": changes,
+                    "file_preview": file_preview
+                }
+            }, indent=2)
         else:
-            return "\n".join(changes)
+            return json.dumps({
+                "success": True,
+                "message": "facets.yaml was successfully written.",
+                "data": {
+                    "module_path": str(full_module_path),
+                    "changes": '\n'.join(changes)
+                }
+            }, indent=2)
             
     except Exception as e:
         error_message = f"Error processing facets.yaml: {str(e)}"
         print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "message": "An unexpected error occurred while processing facets.yaml.",
+            "instructions": "Inform User: An unexpected error occurred while processing facets.yaml.",
+            "error": error_message
+        }, indent=2)
 
 
 @mcp.tool()
@@ -183,24 +255,43 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         content (str): Content to write to the file.
         
     Returns:
-        str: Success message or error message.
+        str: JSON string with success, message, instructions, and optional error/data fields.
     """
     try:
         if file_name == "outputs.tf" or file_name == "output.tf":
-            return ("Error: Writing 'outputs.tf' is not allowed through this function. "
-                    "Please use the write_outputs() tool instead.")
+            return json.dumps({
+                "success": False,
+                "message": "Writing 'outputs.tf' is not allowed through this function.",
+                "instructions": "Inform User: Please use the write_outputs() tool instead.",
+                "error": "Writing 'outputs.tf' is not allowed through write_resource_file."
+            }, indent=2)
 
         # Validate inputs
         if not file_name.endswith(".tf") and not file_name.endswith(".tf.tmpl"):
-            return f"Error: File name must end with .tf or .tf.tmpl, got: {file_name}"
-            
+            return json.dumps({
+                "success": False,
+                "message": f"File name must end with .tf or .tf.tmpl, got: {file_name}",
+                "instructions": "Inform User: Please provide a valid Terraform file name ending with .tf or .tf.tmpl.",
+                "error": f"Invalid file extension for file: {file_name}",
+            }, indent=2)
+
         if file_name == "facets.yaml":
-            return "Error: For facets.yaml, please use write_config_files() instead."
+            return json.dumps({
+                "success": False,
+                "message": "For facets.yaml, please use write_config_files() instead.",
+                "instructions": "Inform User: Use the write_config_files() tool for facets.yaml.",
+                "error": "Attempted to write facets.yaml via write_resource_file.",
+            }, indent=2)
 
         full_module_path = os.path.abspath(module_path)
         if not full_module_path.startswith(os.path.abspath(working_directory)):
-            return "Error: Attempt to write files outside of the working directory."
-            
+            return json.dumps({
+                "success": False,
+                "message": "Attempt to write files outside of the working directory.",
+                "instructions": "Inform User: Please provide a valid module path within the working directory.",
+                "error": "Security restriction: Attempt to write files outside working directory.",
+            }, indent=2)
+
         # Create module directory if it doesn't exist
         os.makedirs(full_module_path, exist_ok=True)
 
@@ -209,16 +300,29 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
         # Write the file
         with open(file_path, 'w') as f:
             f.write(content)
-            
-        return f"Successfully wrote {file_name} to {file_path}"
+
+        return json.dumps({
+            "success": True,
+            "message": f"Successfully wrote {file_name} to {file_path}",
+            "data": {
+                "file_path": file_path,
+                "file_name": file_name
+            }
+        }, indent=2)
+
     except Exception as e:
         error_message = f"Error writing resource file: {str(e)}"
         print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "message": "An exception occurred while writing the resource file.",
+            "instructions": "Inform User: Error writing resource file.",
+            "error": error_message
+        }, indent=2)
 
 
 @mcp.tool()
-def get_output_type_details(output_type: str) -> Dict[str, Any]:
+def get_output_type_details(output_type: str) -> str:
     """
     Get details for a specific output type from the Facets control plane.
     
@@ -229,9 +333,23 @@ def get_output_type_details(output_type: str) -> Dict[str, Any]:
         output_type (str): The output type name in format '@namespace/name'
         
     Returns:
-        Dict[str, Any]: Dictionary containing the output type details or error information
+        str: JSON-formatted string with result status, message, instructions, output type details or error information
     """
-    return get_output_type_details_from_api(output_type)
+    result = get_output_type_details_from_api(output_type)
+
+    if "error" in result:
+        return json.dumps({
+            "success": False,
+            "message": f"Failed to retrieve output type '{output_type}'.",
+            "instructions": f"Inform User: Failed to retrieve output type '{output_type}'.",
+            "error": result["error"]
+        }, indent=2)
+
+    return json.dumps({
+        "success": True,
+        "message": f"Successfully retrieved output type '{output_type}'.",
+        "data": result
+    }, indent=2)
 
 
 @mcp.tool()
@@ -246,7 +364,27 @@ def find_output_types_with_provider(provider_source: str) -> str:
     Returns:
         str: JSON string containing the formatted output type information.
     """
-    return find_output_types_with_provider_from_api(provider_source)
+    raw_response = find_output_types_with_provider_from_api(provider_source)
+    parsed_response = json.loads(raw_response)
+
+    if parsed_response.get("status") == "success":
+        outputs = parsed_response.get("outputs", [])
+        return json.dumps({
+            "success": True,
+            "message": f"Found {len(outputs)} output type(s) for provider source '{provider_source}'.",
+            "data": {
+                "outputs": outputs,
+                "count": len(outputs)
+            }
+        }, indent=2)
+    else:
+        return json.dumps({
+            "success": False,
+            "message": f"Failed to retrieve output types for provider source {provider_source}.",
+            "instructions": f"Inform User: Failed to retrieve output types for provider source {provider_source}.",
+            "error": parsed_response.get("message", "Unknown error occurred.")
+        }, indent=2)
+
 
 
 @mcp.tool()
@@ -263,7 +401,7 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
         output_interfaces (dict): Map of output interfaces.
 
     Returns:
-        str: Success or error message.
+        str: JSON formatted success or error message.
     """
     try:
         full_module_path = ensure_path_in_working_directory(module_path, working_directory)
@@ -275,7 +413,12 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
         # Read and validate facets.yaml
         success, facets_yaml_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
         if not success:
-            return error_message
+            return json.dumps({
+                "success": False,
+                "message": "Failed to validate facets.yaml file.",
+                "instructions": "Inform User: Failed to validate facets.yaml file.",
+                "error": error_message
+            }, indent=2)
 
         # Helper to render values correctly for Terraform
         def render_terraform_value(v):
@@ -323,12 +466,20 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
         with open(file_path, 'w') as f:
             f.write(content)
 
-        return f"Successfully wrote outputs.tf to {file_path}"
+        return json.dumps({
+            "success": True,
+            "message": f"Successfully wrote outputs.tf to {file_path}",
+        }, indent=2)
 
     except Exception as e:
         error_message = f"Error writing outputs.tf: {str(e)}"
         print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "message": "Error writing outputs.tf.",
+            "instructions": "Inform User: Error writing outputs.tf.",
+            "error": error_message
+        }, indent=2)
 
 @mcp.tool()
 def write_readme_file(module_path: str, content: str) -> str:
@@ -341,12 +492,17 @@ def write_readme_file(module_path: str, content: str) -> str:
         content (str): Content to write to README.md.
 
     Returns:
-        str: Success message or error message.
+        str: JSON string with success status, message, instructions, and optional error/data.
     """
     try:
         full_module_path = os.path.abspath(module_path)
         if not full_module_path.startswith(os.path.abspath(working_directory)):
-            return "Error: Attempt to write files outside of the working directory."
+            return json.dumps({
+                "success": False,
+                "message": "Attempt to write files outside of the working directory.",
+                "instructions": "Inform User: Attempt to write files outside of the working directory.",
+                "error": f"Invalid module path: '{module_path}' is outside of the working directory '{working_directory}'."
+            }, indent=2)
 
         # Create module directory if it doesn't exist
         os.makedirs(full_module_path, exist_ok=True)
@@ -356,8 +512,19 @@ def write_readme_file(module_path: str, content: str) -> str:
         with open(readme_path, 'w') as f:
             f.write(content)
 
-        return f"Successfully wrote README.md to {readme_path}"
+        return json.dumps({
+            "success": True,
+            "message": f"Successfully wrote README.md to {readme_path}",
+            "data": {
+                "readme_path": readme_path
+            }
+        }, indent=2)
     except Exception as e:
         error_message = f"Error writing README.md file: {str(e)}"
         print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "message": "Unexpected error occurred while writing the README.md file.",
+            "instructions": "Inform User: Error writing README.md file",
+            "error": str(e)
+        }, indent=2)

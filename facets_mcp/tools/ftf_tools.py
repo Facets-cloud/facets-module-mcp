@@ -1,6 +1,7 @@
 import sys
 from typing import Dict, Any, List
 import os
+import json
 
 from facets_mcp.config import mcp, working_directory  # Import from config for shared resources
 from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
@@ -27,7 +28,6 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
     Step 4 - Call the tool without dry run
 
     Args:
-    - module_path (str): The path to the module.
     - intent (str): The intent for the module.
     - flavor (str): The flavor of the module.
     - cloud (str): The cloud provider.
@@ -36,11 +36,25 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
     - dry_run (bool): If True, returns a description of the generation without executing. MUST set to True initially.
 
     Returns:
-    - str: The output from the FTF command execution.
+    - str: A JSON string with the output from the FTF command execution.
     """
     if dry_run:
-        return (f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', cloud='{cloud}', title='{title}', description='{description}'. "
-                f"Get confirmation from the user before running with dry_run=False to execute the generation.")
+        return json.dumps({
+            "success": True,
+            "message": (f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', cloud='{cloud}', title='{title}', description='{description}'. "
+                        f"Get confirmation from the user before running with dry_run=False to execute the generation."),
+            "instructions": (
+                "Inform User: The module will be generated with the following configuration."
+                "Ask User: Review and confirm or request changes before proceeding with actual generation."
+            ),
+            "data": {
+                "intent": intent,
+                "flavor": flavor,
+                "cloud": cloud,
+                "title": title,
+                "description": description
+            }
+        }, indent=2)
 
     command = [
         "ftf", "generate-module",
@@ -51,7 +65,23 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
         "-d", description,
         working_directory
     ]
-    return run_ftf_command(command)
+
+    try:
+        output = run_ftf_command(command)
+        return json.dumps({
+            "success": True,
+            "message": "Module generation successful.",
+            "data": {
+                "output": output
+            }
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "message": "Module generation failed.",
+            "instructions": "Inform User: An error occurred while generating the module.",
+            "error": str(e)
+        }, indent=2)
 
 
 @mcp.tool()
@@ -75,17 +105,27 @@ def register_output_type(
     - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
     
     Returns:
-    - str: The output from the FTF command execution, error message, or request for confirmation.
+    - str: A JSON string with the output from the FTF command execution, error message, or request for confirmation.
     """
     try:
         # Validate the name format
         if not name.startswith('@') or '/' not in name:
-            return "Error: Name should be in the format '@namespace/name'."
-
+            return json.dumps({
+                "success": False,
+                "message": "Invalid output type name format. Name should be in the format '@namespace/name'.",
+                "instructions": "Ask User: Please provide name in the format '@namespace/name'.",
+                "error": "Name should be in the format '@namespace/name'."
+            }, indent=2)
+        
         # Split the name into namespace and name parts
         name_parts = name.split('/', 1)
         if len(name_parts) != 2:
-            return "Error: Name should be in the format '@namespace/name'."
+            return json.dumps({
+                "success": False,
+                "message": "Invalid output type name format. Name should be in the format '@namespace/name'.",
+                "instructions": "Ask User: Please provide name in the format '@namespace/name'.",
+                "error": "Name should be in the format '@namespace/name'."
+            }, indent=2)
 
         namespace, output_name = name_parts
 
@@ -102,28 +142,49 @@ def register_output_type(
             if e.status == 404:
                 output_exists = False
             else:
-                return f"Error accessing API: {str(e)}"
-
+                return json.dumps({
+                    "success": False,
+                    "message": "Error accessing API.",
+                    "instructions": "Inform User: Error accessing API.",
+                    "error": f"Error accessing API: {str(e)}"
+                }, indent=2)
         # If output exists, compare properties and providers
         if output_exists and existing_output:
             comparison_result = compare_output_types(existing_output, properties, providers)
 
             if "error" in comparison_result:
-                return comparison_result["error"]
-
+                return json.dumps({
+                    "success": False,
+                    "message": "Failed to compare existing output type with new properties and providers.",
+                    "instructions": "Inform User: Failed to compare existing output type with new properties and providers.",
+                    "error": comparison_result["error"]
+                }, indent=2)
             # If properties or providers are different and no override confirmation, ask for confirmation
             if not comparison_result["all_equal"] and not override_confirmation:
                 diff_message = "The output type already exists with different configuration:\n"
                 diff_message += comparison_result["diff_message"]
-                diff_message += "\nTo override the existing configuration, please call this function again with override_confirmation=True"
-                return diff_message
+                return json.dumps({
+                    "success": False,
+                    "message": diff_message,
+                    "instructions": "Ask User: To override the existing configuration, please call this function again with override_confirmation=True.",
+                }, indent=2)
+
             elif comparison_result["all_equal"]:
-                return f"Output type '{name}' already exists with the same configuration. No changes needed."
+                return json.dumps({
+                    "success": True,
+                    "message": f"Output type '{name}' already exists with the same configuration. No changes needed.",
+                    "instructions": f"Inform User: Output type '{name}' already exists with the same configuration. No changes needed."
+                }, indent=2)
 
         # Prepare the output type data
         prepared_data = prepare_output_type_registration(name, properties, providers)
         if "error" in prepared_data:
-            return prepared_data["error"]
+            return json.dumps({
+                "success": False,
+                "message": "Error preparing data for registering a new output type.",
+                "instructions": "Inform User: Error preparing data for registering a new output type.",
+                "error": prepared_data["error"]
+            }, indent=2)
 
         output_type_def = prepared_data["data"]
 
@@ -141,16 +202,24 @@ def register_output_type(
             if output_exists and override_confirmation:
                 result = f"Successfully overrode existing output type '{name}'.\n\n{result}"
 
-            return result
+            return json.dumps({
+                "success": True,
+                "message": result,
+                "instructions": f"Inform User: Successfully overrode existing output type '{name}'.",
+            }, indent=2)
+
         finally:
             # Clean up the temporary file
             if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
     except Exception as e:
-        error_message = f"Error registering output type: {str(e)}"
-        print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "message": "Error registering a new output type in the Facets control plane.",
+            "instructions": "Inform User: Error registering a new output type in the Facets control plane.",
+            "error": str(e)
+        }, indent=2)
 
 
 @mcp.tool()
@@ -168,17 +237,26 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
     - check_only (bool): Flag to only check formatting without applying changes.
 
     Returns:
-    - str: The output from the FTF command execution or error message if validation fails.
+    - str: A JSON string with the output from the FTF command execution or error message if validation fails.
     """
     try:
         # Validate module path exists
         if not os.path.exists(module_path):
-            return f"Error: Module path '{module_path}' does not exist."
-        
+            return json.dumps({
+                "success": False,
+                "message": f"Module path '{module_path}' does not exist.",
+                "instructions": "Inform User: Module path does not exist.",
+                "error": f"Module path '{module_path}' does not exist."
+            }, indent=2)
         # Validate module path is a directory
         if not os.path.isdir(module_path):
-            return f"Error: Module path '{module_path}' is not a directory."
-        
+            return json.dumps({
+                "success": False,
+                "message": f"Module path '{module_path}' is not a directory.",
+                "instructions": "Inform User: Module path is not a directory.",
+                "error": f"Module path '{module_path}' is not a directory."
+            }, indent=2)
+
         # First, run the standard FTF validation
         # Create command
         check_flag = "--check-only" if check_only else ""
@@ -190,30 +268,29 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
             command.append(check_flag)
             
         # Run command
-        ftf_result = run_ftf_command(command)
-        
-        # Check if FTF validation passed
-        validation_results = []
-        validation_results.append("FTF Validation Results:")
-        validation_results.append("=" * 40)
-        validation_results.append(ftf_result)
-        validation_results.append("")
-        
-        # Now perform output type validation
-        validation_results.append("Output Type Validation:")
-        validation_results.append("=" * 40)
+        run_ftf_command(command)
         
         # Use the utility function for output type validation
         success, validation_message = validate_module_output_types(module_path)
-        validation_results.append(validation_message)
-        
+        if not success:
+            return json.dumps({
+                "success": False,
+                "instructions": "Failed to validate module directory using FTF CLI. Try to fix the issues and run again, or ask the user to fix it if unclear what might be the issue.",
+                "error": f"Failed to validate module directory using FTF CLI. {validation_message}"
+            }, indent=2)
+
         # Return combined results
-        return "\n".join(validation_results)
-        
+        return json.dumps({
+            "success": True,
+            "message": "Module directory is valid!"
+        }, indent=2)
+
     except Exception as e:
-        error_message = f"Error validating module directory: {str(e)}"
-        print(error_message, file=sys.stderr)
-        return error_message
+        return json.dumps({
+            "success": False,
+            "instructions": "Module validation failed. Try to resolve the error if possible and retry, otherwise inform the user.",
+            "error": str(e)
+        }, indent=2)
 
 
 @mcp.tool()
@@ -228,24 +305,37 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
     - publishable (bool): Flag to indicate if the module is publishable.
 
     Returns:
-    - str: The output from the FTF command execution.
+    - str: A JSON string with the output from the FTF command execution.
     """
-    # Get git repository details
-    git_info = get_git_repo_info(working_directory)
-    git_repo_url = git_info["url"]
-    git_ref = git_info["ref"]
+    try:
+        # Get git repository details
+        git_info = get_git_repo_info(working_directory)
+        git_repo_url = git_info["url"]
+        git_ref = git_info["ref"]
 
-    command = [
-        "ftf", "preview-module",
-        module_path
-    ]
-    if auto_create_intent:
-        command.extend(["-a", str(auto_create_intent)])
-    if publishable:
-        command.extend(["-f", str(publishable)])
+        command = [
+            "ftf", "preview-module",
+            module_path
+        ]
+        if auto_create_intent:
+            command.extend(["-a", str(auto_create_intent)])
+        if publishable:
+            command.extend(["-f", str(publishable)])
 
-    # Always include git details (now from local repository)
-    command.extend(["-g", git_repo_url])
-    command.extend(["-r", git_ref])
+        # Always include git details (now from local repository)
+        command.extend(["-g", git_repo_url])
+        command.extend(["-r", git_ref])
 
-    return run_ftf_command(command)
+        message = run_ftf_command(command)
+
+        return json.dumps({
+            "success": True,
+            "message": message,
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "instructions": "Try to resolve the error if possible, otherwise inform the user: Failed to push module preview to the control plane.",
+            "error": str(e)
+        }, indent=2)

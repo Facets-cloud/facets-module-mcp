@@ -19,12 +19,25 @@ def list_test_projects() -> str:
     Retrieve and return the names of all available test projects for the user to choose from.
 
     Returns:
-        str: List of all test projects
+        str: A JSON string containing success message and list of all test projects or error message
     """
     api_instance = UiStackControllerApi(ClientUtils.get_client())
     stacks = api_instance.get_stacks_using_get1()
     stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
-    return stack_names if stack_names else "No test projects found. Ask the user to create one from the Facets UI."
+    if stack_names:
+        return json.dumps({
+            "success": True,
+            "message": "Succesfully retrieved the names of all available test projects.",
+            "instructions": f"Inform User: Choose a test project from the project list.",
+            "data": {
+                "project_list": stack_names
+            }
+        }, indent=2)
+    else:
+        return json.dumps({
+            "success": False,
+            "error": "No test projects found. Ask the user to create one from the Facets UI."
+        }, indent=2)
 
 
 @mcp.tool()
@@ -164,12 +177,16 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             return json.dumps({
                 "success": True,
                 "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
-                "resources_deployed": len(matching_resources),
-                "resource_names": resource_names,
-                "deployment_id": deployment_id,
-                "status": initial_status,
-                "cluster_id": cluster_id,
-                "check_status_command": f"check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}')"
+                "instructions": f"Inform User: Use check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}') to monitor progress.",
+                "data": {
+                    "resources_deployed": len(matching_resources),
+                    "resource_names": resource_names,
+                    "deployment_id": deployment_id,
+                    "status": initial_status,
+                    "cluster_id": cluster_id,
+                    "cluster_name": cluster_name,
+                    "project_name": project_name
+                }
             }, indent=2)
 
         except ApiException as e:
@@ -179,8 +196,10 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in test_already_previewed_module tool: {str(e)}"
-        return json.dumps({"success": False, "instructions:": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "error": f"Error in test_already_previewed_module tool: {str(e)}",
+        }, indent=2)
 
 
 @mcp.tool()
@@ -219,16 +238,16 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 # Return immediately if not waiting or if already complete
                 return json.dumps({
                     "success": True,
-                    "status": deployment.status,
-                    "deployment_id": deployment_id,
-                    "cluster_id": cluster_id,
-                    "started_at": deployment.created_at.isoformat() if hasattr(deployment,
-                                                                               'created_at') and deployment.created_at else None,
-                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
-                                                                                   'completed_at') and deployment.completed_at else None,
-                    "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                     "message": f"Deployment {deployment.status}",
-                    "elapsed_seconds": elapsed_time,
+                    "data": {
+                        "status": deployment.status,
+                        "deployment_id": deployment_id,
+                        "cluster_id": cluster_id,
+                        "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
+                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                        "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
+                        "elapsed_seconds": elapsed_time,
+                    },
                 }, indent=2)
 
             # If we're waiting, poll until completion or timeout
@@ -250,7 +269,11 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                     return json.dumps({
                         "success": False,
                         "error": f"Error checking deployment status: {str(e)}",
-                        "elapsed_seconds": elapsed_time,
+                        "data": {
+                            "deployment_id": deployment_id,
+                            "cluster_id": cluster_id,
+                            "elapsed_seconds": elapsed_time,
+                        },
                     }, indent=2)
 
             # Check if we timed out
@@ -258,26 +281,29 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                     deployment.status == "IN_PROGRESS" or deployment.status == "STARTED"):
                 return json.dumps({
                     "success": False,
-                    "status": deployment.status,
                     "error": f"Timed out after {timeout_seconds} seconds. Deployment still in progress.",
-                    "deployment_id": deployment_id,
-                    "cluster_id": cluster_id,
-                    "elapsed_seconds": elapsed_time,
+                    "data": {
+                        "status": deployment.status,
+                        "deployment_id": deployment_id,
+                        "cluster_id": cluster_id,
+                        "elapsed_seconds": elapsed_time,
+                    },
                 }, indent=2)
 
             # Deployment completed (either successfully or with failure)
             return json.dumps({
                 "success": deployment.status == "SUCCEEDED",
-                "status": deployment.status,
-                "deployment_id": deployment_id,
-                "cluster_id": cluster_id,
-                "started_at": deployment.created_at.isoformat() if hasattr(deployment,
-                                                                           'created_at') and deployment.created_at else None,
-                "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
-                                                                               'completed_at') and deployment.completed_at else None,
-                "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                 "message": f"Deployment {deployment.status}",
-                "elapsed_seconds": elapsed_time,
+                "errors" : None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
+                "data": {
+                    "status": deployment.status,
+                    "deployment_id": deployment_id,
+                    "cluster_id": cluster_id,
+                    "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
+                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                    "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
+                    "elapsed_seconds": elapsed_time,
+                },
             }, indent=2)
 
         except ApiException as e:
@@ -293,8 +319,10 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in check_deployment_status tool: {str(e)}"
-        return json.dumps({"success": False, "error": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "error": f"Error in check_deployment_status tool: {str(e)}",
+        }, indent=2)
 
 
 @mcp.tool()
@@ -343,11 +371,14 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
             return json.dumps({
                 "success": True,
-                "deployment_id": deployment_id,
-                "cluster_id": cluster_id,
-                "status": status,
-                "log_count": len(formatted_logs),
-                "logs": formatted_logs
+                "message": f"Successfully retrieved logs for deployment {deployment_id}.",
+                "data": {
+                    "deployment_id": deployment_id,
+                    "cluster_id": cluster_id,
+                    "status": status,
+                    "log_count": len(formatted_logs),
+                    "logs": formatted_logs
+                }
             }, indent=2)
 
         except ApiException as e:
@@ -363,5 +394,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
                 }, indent=2)
 
     except Exception as e:
-        error_message = f"Error in get_deployment_logs tool: {str(e)}"
-        return json.dumps({"success": False, "error": error_message}, indent=2)
+        return json.dumps({
+            "success": False,
+            "error": f"Error in get_deployment_logs tool: {str(e)}",
+        }, indent=2)

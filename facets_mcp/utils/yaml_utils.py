@@ -15,7 +15,7 @@ from facets_mcp.utils.ftf_command_utils import run_ftf_command
 from facets_mcp.utils.client_utils import ClientUtils
 
 
-def validate_yaml(module_path: str, yaml_content: str) -> str:
+def validate_yaml(module_path: str, yaml_content: str) -> None:
     """
     Validate yaml content against FTF requirements.
     Writes yaml_content to a temporary file in module_path for validation, then deletes it.
@@ -34,7 +34,7 @@ def validate_yaml(module_path: str, yaml_content: str) -> str:
         with open(temp_path, 'w') as temp_file:
             temp_file.write(yaml_content)
     except Exception as e:
-        return f"Error writing temporary validation file: {str(e)}"
+        raise RuntimeError(str(e))
     
     command = [
         "ftf", "validate-facets",
@@ -42,18 +42,15 @@ def validate_yaml(module_path: str, yaml_content: str) -> str:
         module_path
     ]
 
-    validation_error = run_ftf_command(command)
-
     try:
-        os.remove(temp_path)
-    except Exception:
-        pass
-
-    if validation_error.startswith("Error executing command"):
-        raise RuntimeError(validation_error)
-
-    return validation_error
-
+        run_ftf_command(command)
+    except Exception as e:
+        raise RuntimeError(str(e))
+    finally:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
 
 def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str, Any]:
     """
@@ -275,13 +272,6 @@ def validate_module_output_types(module_path: str) -> Tuple[bool, str]:
         
         if not success:
             return False, f"Output type validation failed: {error_message}"
-        
-        # Additional validation to check output types
-        output_validation_results = validate_output_types(facets_content, output_api)
-        has_missing_types, missing_types_error = check_missing_output_types(output_validation_results)
-        
-        if has_missing_types:
-            return False, f"Missing output types detected:\n{missing_types_error}"
         else:
             return True, "✓ All output types validation passed successfully."
             
