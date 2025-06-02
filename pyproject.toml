@@ -15,15 +15,16 @@ dependencies = [
     "mcp[cli]",
     "checkov",
     "questionary",
-    "ftf-cli==v0.2.10",
+    "ftf-cli==0.2.11",
     "facets-control-plane-sdk",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["Facets", "MCP", "Terraform", "Python"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
