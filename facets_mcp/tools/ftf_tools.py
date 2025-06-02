@@ -214,13 +214,11 @@ def register_output_type(
                 os.remove(temp_file_path)
 
     except Exception as e:
-        error_message = f"Error registering output type: {str(e)}"
-        print(error_message, file=sys.stderr)
         return json.dumps({
             "success": False,
             "message": "Error registering a new output type in the Facets control plane.",
             "instructions": "Inform User: Error registering a new output type in the Facets control plane.",
-            "error": error_message
+            "error": str(e)
         }, indent=2)
 
 
@@ -270,30 +268,21 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
             command.append(check_flag)
             
         # Run command
-        ftf_result = run_ftf_command(command)
-        
-        # Check if FTF validation passed
-        validation_results = []
-        validation_results.append("FTF Validation Results:")
-        validation_results.append("=" * 40)
-        validation_results.append(ftf_result)
-        validation_results.append("")
-        
-        # Now perform output type validation
-        validation_results.append("Output Type Validation:")
-        validation_results.append("=" * 40)
+        run_ftf_command(command)
         
         # Use the utility function for output type validation
         success, validation_message = validate_module_output_types(module_path)
-        validation_results.append(validation_message)
-        
+        if not success:
+            return json.dumps({
+                "success": False,
+                "instructions": "Failed to validate module directory using FTF CLI. Try to fix the issues and run again, or ask the user to fix it if unclear what might be the issue.",
+                "error": f"Failed to validate module directory using FTF CLI. {validation_message}"
+            }, indent=2)
+
         # Return combined results
         return json.dumps({
             "success": True,
-            "message": "Module directory validation completed using FTF CLI.",
-            "data": {
-                "results": "\n".join(validation_results)
-            }
+            "message": "Module directory is valid!"
         }, indent=2)
 
     except Exception as e:

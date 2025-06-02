@@ -151,14 +151,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
 
         # Run validation method on facets_yaml and module_path
         try:
-            validation_result = validate_yaml(str(full_module_path), facets_yaml)
-            if validation_result.startswith("Error executing command"):
-                return json.dumps({
-                    "success": False,
-                    "message": "facets.yaml validation failed.",
-                    "instructions": "Please correct the errors in facets.yaml and try again.",
-                    "error": validation_result
-                }, indent=2)
+            validate_yaml(str(full_module_path), facets_yaml)
         except Exception as e:
             return json.dumps({
                 "success": False,
