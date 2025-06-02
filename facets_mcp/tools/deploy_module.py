@@ -19,7 +19,7 @@ def list_test_projects() -> str:
     Retrieve and return the names of all available test projects for the user to choose from.
 
     Returns:
-        str: A JSON string success message and list of all test projects or error message
+        str: A JSON string containing success message and list of all test projects or error message
     """
     api_instance = UiStackControllerApi(ClientUtils.get_client())
     stacks = api_instance.get_stacks_using_get1()
@@ -73,20 +73,19 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project.",
+                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "error": f"Project '{project_name}' does not exist: {str(e)}",
+                    "instructions": f"Inform User: Project '{project_name}' does not exist."
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
-                    "message": f"Error accessing project '{project_name}'.",
-                    "error": str(e),
+                    "instructions": f"Inform User: Error accessing project '{project_name}': {str(e)}"
                 }, indent=2)
 
         # Step 2: Get the running environments (clusters) of the project
@@ -97,14 +96,14 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not running_clusters:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first.",
+                    "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first."
                 }, indent=2)
 
             if len(running_clusters) > 1:
                 cluster_names = [c.cluster.name for c in running_clusters]
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment.",
+                    "instructions": f"Inform User:  Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
                 }, indent=2)
 
             # Get the cluster ID of the single running cluster
@@ -114,8 +113,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "message": f"Error getting environment information for '{project_name}'.",
-                "error": str(e),
+                "instructions": f"Inform User: Error getting environment information for '{project_name}': {str(e)}"
             }, indent=2)
 
         # Step 3: Get all resources for the cluster
@@ -137,14 +135,13 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not matching_resources:
                 return json.dumps({
                     "success": False,
-                    "error": f"No matching resource found with intent='{intent}', flavor='{flavor}', version='{version}' in the running environment.",
+                    "instructions": f"Inform User: No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
                 }, indent=2)
 
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "message": f"Error retrieving resources for environment '{cluster_id}'.",
-                "error": str(e),
+                "instructions": f"Inform User: Error retrieving resources for environment '{cluster_id}': {str(e)}"
             }, indent=2)
 
         # Step 4: Deploy the module by triggering hotfix deployment
@@ -195,14 +192,12 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         except ApiException as e:
             return json.dumps({
                 "success": False,
-                "message": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}'.",
-                "error": str(e),
+                "instructions": f"Inform User: Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}': {str(e)}"
             }, indent=2)
 
     except Exception as e:
         return json.dumps({
             "success": False,
-            "message": f"Error deploying modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{project_name}'.",
             "error": f"Error in test_already_previewed_module tool: {str(e)}",
         }, indent=2)
 
@@ -390,19 +385,16 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "message": f"Failed to retrieve logs for deployment {deployment_id}. Verify the deployment ID.",
                     "error": f"Deployment not found: {deployment_id}",
                 }, indent=2)
             else:
                 return json.dumps({
                     "success": False,
-                    "message": "Failed to retrieve deployment logs.",
                     "error": f"Error getting deployment logs: {str(e)}",
                 }, indent=2)
 
     except Exception as e:
         return json.dumps({
             "success": False,
-            "message": f"Failed to get logs for deployment with cluster ID {cluster_id} and deployment ID {deployment_id}.",
             "error": f"Error in get_deployment_logs tool: {str(e)}",
         }, indent=2)
