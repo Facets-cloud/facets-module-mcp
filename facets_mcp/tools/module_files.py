@@ -1,30 +1,29 @@
 # This file contains utility functions for handling module files
 
+import json
 import os
 import sys
-import json
-from typing import Optional, Dict, Any, List
 from pathlib import Path
 
+from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+
 from facets_mcp.config import mcp, working_directory
+from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.file_utils import (
-    list_files_in_directory, 
-    read_file_content, 
+    list_files_in_directory,
+    read_file_content,
     generate_file_previews,
-    write_file_safely,
     ensure_path_in_working_directory
 )
-from facets_mcp.utils.yaml_utils import (
-    validate_yaml, 
-    validate_output_types, 
-    check_missing_output_types,
-    read_and_validate_facets_yaml
-)
-from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
-from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.output_utils import (
     get_output_type_details_from_api,
     find_output_types_with_provider_from_api
+)
+from facets_mcp.utils.yaml_utils import (
+    validate_yaml,
+    validate_output_types,
+    check_missing_output_types,
+    read_and_validate_facets_yaml
 )
 
 # Initialize client utility
@@ -156,7 +155,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             return json.dumps({
                 "success": False,
                 "message": "facets.yaml validation failed.",
-                "instructions": "Inform User: facets.yaml validation failed.",
+                "instructions": "Fix the facets.yaml file and try again.",
                 "error": str(e)
             }, indent=2)
 
@@ -170,7 +169,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
             return json.dumps({
                 "success": False,
                 "message": "Output type validation failed.",
-                "instructions": "Please fix the missing or invalid output types before proceeding.",
+                "instructions": "Register the missing output types first and try again.",
                 "error": error_message
             }, indent=2)
 
