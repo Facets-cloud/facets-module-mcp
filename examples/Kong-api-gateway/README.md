@@ -3,13 +3,20 @@
 [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](./facets.yaml)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-compatible-green.svg)](./facets.yaml)
 
-Production-ready Kong API Gateway deployment with secure defaults, SSL termination, rate limiting, and authentication for pure Kubernetes environments.
+## Reference
+
+**Chat Link**
+https://claude.ai/share/a1794ff0-3890-4159-970d-3a072a99b78c
+
+This module creates a production-ready Kong API Gateway deployment for Kubernetes environments with secure defaults, SSL termination, rate limiting, and authentication capabilities.
 
 ## Overview
 
 This module deploys Kong API Gateway 3.4 as a scalable, secure, and production-ready solution on Kubernetes. It provides comprehensive API management capabilities including authentication, rate limiting, CORS handling, and monitoring integration without any cloud provider dependencies or Kong Custom Resource Definitions (CRDs).
 
-The module uses Kong's Admin API for plugin configuration, making it compatible with any Kubernetes cluster without requiring Kong Ingress Controller or Kong CRDs.
+The module uses Kong's Admin API for plugin configuration, making it compatible with any Kubernetes cluster without requiring Kong Ingress Controller or Kong CRDs. Key features include:
+- **Pure Kubernetes** - No cloud provider specific features
+- **Database flexible** - Supports both PostgreSQL and DB-less modes
 
 ## Environment as Dimension
 
@@ -75,7 +82,3 @@ This module implements several security best practices:
 - **No Kong CRDs required** - Works without Kong Ingress Controller
 - **Pure Kubernetes** - No cloud provider specific features
 - **Database flexible** - Supports both PostgreSQL and DB-less modes
-
-## Reference  
-- https://claude.ai/share/a1794ff0-3890-4159-970d-3a072a99b78c
-- Claude Chat link for reference.
