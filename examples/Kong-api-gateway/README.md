@@ -76,6 +76,6 @@ This module implements several security best practices:
 - **Pure Kubernetes** - No cloud provider specific features
 - **Database flexible** - Supports both PostgreSQL and DB-less modes
 
-
+## Reference  
 - https://claude.ai/share/a1794ff0-3890-4159-970d-3a072a99b78c
 - Claude Chat link for reference.
