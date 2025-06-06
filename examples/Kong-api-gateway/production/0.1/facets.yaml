@@ -1,0 +1,309 @@
+intent: kong-api-gateway
+flavor: production
+version: '1.0'
+clouds:
+- kubernetes
+description: Production-ready Kong API Gateway deployment with secure defaults, SSL
+  termination, rate limiting, and authentication - Pure Kubernetes deployment
+inputs:
+  kubernetes_cluster:
+    type: '@outputs/kubernetes'
+    optional: true
+    displayName: Kubernetes Cluster
+    description: Target Kubernetes cluster for Kong deployment (optional - uses current
+      cluster context if not provided)
+spec:
+  title: Kong API Gateway Configuration
+  description: Configure Kong API Gateway with production-ready security defaults
+    - Pure Kubernetes deployment
+  type: object
+  properties:
+    namespace:
+      type: string
+      title: Kubernetes Namespace Base
+      description: Base namespace name where Kong will be deployed (instance name
+        will be appended for uniqueness)
+      default: kong-gateway
+    deployment:
+      type: object
+      title: Deployment Configuration
+      description: Kong deployment settings
+      properties:
+        replicas:
+          type: number
+          title: Number of Replicas
+          description: Number of Kong gateway replicas for high availability
+          default: 3
+          minimum: 1
+          maximum: 10
+        resources:
+          type: object
+          title: Resource Limits
+          description: CPU and memory resource allocation
+          properties:
+            requests:
+              type: object
+              properties:
+                cpu:
+                  type: string
+                  title: CPU Request
+                  default: 500m
+                memory:
+                  type: string
+                  title: Memory Request
+                  default: 1Gi
+            limits:
+              type: object
+              properties:
+                cpu:
+                  type: string
+                  title: CPU Limit
+                  default: '2'
+                memory:
+                  type: string
+                  title: Memory Limit
+                  default: 4Gi
+    ingress:
+      type: object
+      title: Ingress Configuration
+      description: External access using Kubernetes Ingress (no cloud LoadBalancer)
+      properties:
+        enabled:
+          type: boolean
+          title: Enable Ingress
+          description: Create Kubernetes ingress for external access
+          default: true
+        hostname:
+          type: string
+          title: Gateway Hostname
+          description: Domain name for the API gateway
+          pattern: ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$
+        tls_enabled:
+          type: boolean
+          title: Enable TLS/SSL
+          description: Enable HTTPS with TLS termination
+          default: true
+        cert_manager_enabled:
+          type: boolean
+          title: Enable Cert Manager
+          description: Auto-generate SSL certificates using cert-manager
+          default: true
+    database:
+      type: object
+      title: Database Configuration
+      description: Kong database backend settings
+      properties:
+        mode:
+          type: string
+          title: Database Mode
+          description: Kong database mode
+          enum:
+          - postgres
+          - dbless
+          default: dbless
+        postgres:
+          type: object
+          title: PostgreSQL Configuration
+          description: PostgreSQL database settings (when mode is postgres)
+          x-ui-visible-if:
+            field: spec.database.mode
+            values:
+            - postgres
+          properties:
+            host:
+              type: string
+              title: Database Host
+              description: PostgreSQL server hostname
+            port:
+              type: number
+              title: Database Port
+              description: PostgreSQL server port
+              default: 5432
+            database:
+              type: string
+              title: Database Name
+              description: PostgreSQL database name
+              default: kong
+            username:
+              type: string
+              title: Database Username
+              description: PostgreSQL username
+              default: kong
+    plugins:
+      type: object
+      title: Kong Plugins Configuration
+      description: Security and functionality plugins
+      properties:
+        rate_limiting:
+          type: object
+          title: Rate Limiting
+          description: Global rate limiting configuration
+          properties:
+            enabled:
+              type: boolean
+              title: Enable Rate Limiting
+              default: true
+            requests_per_minute:
+              type: number
+              title: Requests per Minute
+              description: Maximum requests per minute per client
+              default: 1000
+              minimum: 1
+        cors:
+          type: object
+          title: CORS Configuration
+          description: Cross-Origin Resource Sharing settings
+          properties:
+            enabled:
+              type: boolean
+              title: Enable CORS
+              default: true
+            origins:
+              type: string
+              title: Allowed Origins
+              description: Comma-separated list of allowed origins (* for all)
+              default: '*'
+        authentication:
+          type: object
+          title: Authentication
+          description: Authentication plugin settings
+          properties:
+            jwt_enabled:
+              type: boolean
+              title: Enable JWT Authentication
+              default: false
+            oauth2_enabled:
+              type: boolean
+              title: Enable OAuth2
+              default: false
+            key_auth_enabled:
+              type: boolean
+              title: Enable API Key Authentication
+              default: true
+        security:
+          type: object
+          title: Security Plugins
+          description: Additional security configurations
+          properties:
+            ip_restriction_enabled:
+              type: boolean
+              title: Enable IP Restriction
+              default: false
+            bot_detection_enabled:
+              type: boolean
+              title: Enable Bot Detection
+              default: true
+            request_size_limiting_enabled:
+              type: boolean
+              title: Enable Request Size Limiting
+              default: true
+            max_request_size:
+              type: number
+              title: Maximum Request Size (MB)
+              description: Maximum allowed request size in megabytes
+              default: 10
+              minimum: 1
+              maximum: 100
+    monitoring:
+      type: object
+      title: Monitoring & Observability
+      description: Monitoring and logging configuration
+      properties:
+        prometheus_enabled:
+          type: boolean
+          title: Enable Prometheus Metrics
+          description: Export Kong metrics to Prometheus
+          default: true
+        logging:
+          type: object
+          title: Logging Configuration
+          properties:
+            level:
+              type: string
+              title: Log Level
+              description: Kong logging level
+              enum:
+              - debug
+              - info
+              - notice
+              - warn
+              - error
+              - crit
+              - alert
+              - emerg
+              default: notice
+            access_log_enabled:
+              type: boolean
+              title: Enable Access Logs
+              default: true
+        health_checks:
+          type: object
+          title: Health Check Configuration
+          properties:
+            enabled:
+              type: boolean
+              title: Enable Health Checks
+              default: true
+            liveness_probe_path:
+              type: string
+              title: Liveness Probe Path
+              default: /status
+            readiness_probe_path:
+              type: string
+              title: Readiness Probe Path
+              default: /status/ready
+  required:
+  - namespace
+  - deployment
+  - ingress
+outputs:
+  default:
+    type: '@outputs/kong-api-gateway'
+    title: Kong API Gateway
+    description: Complete Kong API Gateway deployment details
+  gateway_endpoint:
+    type: '@outputs/api-gateway-endpoint'
+    title: Gateway Endpoint
+    description: Kong API Gateway external endpoint URL
+  admin_endpoint:
+    type: '@outputs/kong-admin-endpoint'
+    title: Admin API Endpoint
+    description: Kong Admin API endpoint for configuration
+sample:
+  kind: kong-api-gateway
+  flavor: production
+  version: '1.0'
+  disabled: false
+  spec:
+    namespace: kong-gateway
+    deployment:
+      replicas: 3
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: '2'
+          memory: 4Gi
+    ingress:
+      enabled: true
+      tls_enabled: true
+      cert_manager_enabled: true
+    database:
+      mode: dbless
+    plugins:
+      rate_limiting:
+        enabled: true
+      cors:
+        enabled: true
+      authentication:
+        key_auth_enabled: true
+      security:
+        bot_detection_enabled: true
+        request_size_limiting_enabled: true
+    monitoring:
+      prometheus_enabled: true
+      logging:
+        level: notice
+      health_checks:
+        enabled: true
