@@ -26,13 +26,19 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 
 | Tool Name                                | Description                                                                                                                              |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `FIRST_STEP_get_instructions`            | Loads all module writing instructions from the `module_instructions` directory and supplementary instructions from `mcp_instructions`. Always call this first. |
 | `list_files`                             | Lists all files in the specified module directory securely within the working directory.                                                 |
 | `read_file`                              | Reads the content of a file within the working directory.                                                                                |
 | `write_config_files`                     | Writes and validates `facets.yaml` configuration files with dry-run and diff previews.                                                   |
-| `write_resource_file`                    | Writes Terraform resource files (`main.tf`, `outputs.tf`, etc.) safely.                                                                  |
+| `write_resource_file`                    | Writes Terraform resource files (`main.tf`, `variables.tf`, etc.) safely. Excludes `outputs.tf` and `facets.yaml`.                     |
+| `write_outputs`                          | Writes the `outputs.tf` file for a module with output attributes and interfaces in a local block.                                       |
+| `write_readme_file`                      | Writes a `README.md` file for the module directory with AI-generated content.                                                           |
 | `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation.                                                    |
-| `run_ftf_validate_directory`             | Validates a Terraform module directory using FTF CLI standards.                                                                          |
-| `run_ftf_preview_module`                 | Previews a module with git context extracted automatically.                                                                              |
+| `validate_module`                        | Validates a Terraform module directory using FTF CLI standards and checks output types.                                                 |
+| `push_preview_module_to_facets_cp`       | Previews a module by pushing a test version to the control plane with git context extracted automatically.                             |
+| `register_output_type`                   | Registers a new output type in the Facets control plane with properties and providers.                                                  |
+| `get_output_type_details`                | Retrieves details for a specific output type from the Facets control plane.                                                             |
+| `find_output_types_with_provider`        | Finds all output types that include a specific provider source for module configurations.                                               |
 | `get_local_modules`                      | Scans and lists all local Terraform modules by searching for `facets.yaml` recursively, including loading outputs.tf content if present. |
 | `search_modules_after_confirmation`      | Searches modules by filtering for a string within facets.yaml files, supports pagination, and returns matched modules with details.      |
 | `list_test_projects`                     | Retrieves and returns the names of all available test projects for deployment.                                                           |
@@ -125,7 +131,7 @@ Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/c
 
 - Use FTF CLI integration tools for module scaffolding, validation, and preview workflows.
 
-- Complete deployment flow: preview modules with `run_ftf_preview_module`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
+- Complete deployment flow: preview modules with `push_preview_module_to_facets_cp`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
 
 - Employ MCP prompts like `generate_new_module` to guide module generation interactively.
 
