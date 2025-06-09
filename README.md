@@ -131,7 +131,7 @@ Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/c
 
 - Use FTF CLI integration tools for module scaffolding, validation, and preview workflows.
 
-- Complete deployment flow: preview modules with `run_ftf_preview_module`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
+- Complete deployment flow: preview modules with `push_preview_module_to_facets_cp`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
 
 - Employ MCP prompts like `generate_new_module` to guide module generation interactively.
 
