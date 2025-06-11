@@ -27,8 +27,7 @@ def list_test_projects() -> str:
     if stack_names:
         return json.dumps({
             "success": True,
-            "message": "Successfully retrieved the names of all available test projects.",
-            "instructions": f"Inform User: Choose a test project from the project list.",
+            "instructions": "Ask the user to choose a test project from the project list. Do not pick one by yourself.",
             "data": {
                 "project_list": stack_names
             }
