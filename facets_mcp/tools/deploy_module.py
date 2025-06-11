@@ -27,7 +27,7 @@ def list_test_projects() -> str:
     if stack_names:
         return json.dumps({
             "success": True,
-            "instructions": "Ask the user to choose a test project from the project list. Do not pick one by yourself.",
+            "instructions": "If there are multiple projects available, ask the user to choose a test project from the project list. Do not pick one by yourself.",
             "data": {
                 "project_list": stack_names
             }
@@ -40,7 +40,8 @@ def list_test_projects() -> str:
 
 
 @mcp.tool()
-def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str, environment_name: str = None) -> str:
+def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str,
+                                  environment_name: str = None) -> str:
     """
     Test a module that has been previewed by asking the user for the project_name where it needs to be tested.
 
@@ -107,14 +108,14 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
                     if cluster.cluster.name == environment_name:
                         target_cluster = cluster
                         break
-                
+
                 if not target_cluster:
                     available_envs = [c.cluster.name for c in running_clusters]
                     return json.dumps({
                         "success": False,
                         "instructions": f"Inform User: Environment '{environment_name}' not found or not running in project '{project_name}'. Available running environments: {', '.join(available_envs)}"
                     }, indent=2)
-                
+
                 cluster_id = target_cluster.cluster.id
                 cluster_name = target_cluster.cluster.name
             else:
@@ -125,7 +126,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
                         "success": False,
                         "instructions": f"Inform User: Multiple running environments found: {', '.join(cluster_names)}. Please specify the environment_name parameter to choose which environment to deploy to."
                     }, indent=2)
-                
+
                 # Only one running environment, use it
                 cluster_id = running_clusters[0].cluster.id
                 cluster_name = running_clusters[0].cluster.name
@@ -263,8 +264,10 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                         "status": deployment.status,
                         "deployment_id": deployment_id,
                         "cluster_id": cluster_id,
-                        "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
-                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                        "started_at": deployment.created_at.isoformat() if hasattr(deployment,
+                                                                                   'created_at') and deployment.created_at else None,
+                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
+                                                                                       'completed_at') and deployment.completed_at else None,
                         "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                         "elapsed_seconds": elapsed_time,
                     },
@@ -314,13 +317,15 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
             return json.dumps({
                 "success": deployment.status == "SUCCEEDED",
                 "message": f"Deployment {deployment.status}",
-                "errors" : None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
+                "errors": None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
                 "data": {
                     "status": deployment.status,
                     "deployment_id": deployment_id,
                     "cluster_id": cluster_id,
-                    "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
-                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                    "started_at": deployment.created_at.isoformat() if hasattr(deployment,
+                                                                               'created_at') and deployment.created_at else None,
+                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
+                                                                                   'completed_at') and deployment.completed_at else None,
                     "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                     "elapsed_seconds": elapsed_time,
                 },
