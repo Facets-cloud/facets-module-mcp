@@ -535,9 +535,10 @@ def write_readme_file(module_path: str, content: str) -> str:
 def edit_file_block(file_path: str, old_string: str, new_string: str, expected_replacements: int = 1) -> str:
     """
     Apply surgical edits to specific blocks of text in a file.
+    <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
     
     Makes precise changes to files by finding and replacing exact text matches.
-    This is safer than rewriting entire files and preserves formatting and line endings.
+    This is safer than rewriting entire files.
     
     Best practices:
     - Include enough context in old_string to make it unique
