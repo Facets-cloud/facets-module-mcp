@@ -13,7 +13,8 @@ from facets_mcp.utils.file_utils import (
     list_files_in_directory,
     read_file_content,
     generate_file_previews,
-    ensure_path_in_working_directory
+    ensure_path_in_working_directory,
+    perform_text_replacement
 )
 from facets_mcp.utils.output_utils import (
     get_output_type_details_from_api,
@@ -527,4 +528,81 @@ def write_readme_file(module_path: str, content: str) -> str:
             "message": "Unexpected error occurred while writing the README.md file.",
             "instructions": "Inform User: Error writing README.md file",
             "error": str(e)
+        }, indent=2)
+
+
+@mcp.tool()
+def edit_file_block(file_path: str, old_string: str, new_string: str, expected_replacements: int = 1) -> str:
+    """
+    Apply surgical edits to specific blocks of text in a file.
+    
+    Makes precise changes to files by finding and replacing exact text matches.
+    This is safer than rewriting entire files and preserves formatting and line endings.
+    
+    Best practices:
+    - Include enough context in old_string to make it unique
+    - Use expected_replacements=1 for safety (default)
+    - For multiple replacements, specify the exact count expected
+    
+    Args:
+        file_path (str): Path to the file to edit (must be within working directory)
+        old_string (str): Exact text to find and replace (include context for uniqueness)
+        new_string (str): Replacement text
+        expected_replacements (int): Expected number of matches (default: 1, prevents unintended changes)
+        
+    Returns:
+        str: JSON formatted response with success status, message, and optional error details
+    """
+    try:
+        # Validate file path is within working directory
+        full_file_path = ensure_path_in_working_directory(file_path, working_directory)
+        
+        # Read current file content
+        try:
+            current_content = read_file_content(file_path, working_directory)
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "message": f"Failed to read file '{file_path}'",
+                "error": str(e)
+            }, indent=2)
+        
+        # Perform the text replacement
+        success, result, info_message = perform_text_replacement(
+            current_content, old_string, new_string, expected_replacements
+        )
+        
+        if not success:
+            return json.dumps({
+                "success": False,
+                "message": "Text replacement failed",
+                "error": result  # result contains error message when success=False
+            }, indent=2)
+        
+        # Write the modified content back to file
+        try:
+            with open(full_file_path, 'w', encoding='utf-8') as f:
+                f.write(result)  # result contains new content when success=True
+                
+            return json.dumps({
+                "success": True,
+                "message": f"{info_message} in '{file_path}'",
+                "data": {
+                    "file_path": file_path,
+                    "replacements_made": expected_replacements
+                }
+            }, indent=2)
+            
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "message": "Failed to write changes to file",
+                "error": str(e)
+            }, indent=2)
+            
+    except Exception as e:
+        error_message = f"Error during file edit operation: {str(e)}"
+        return json.dumps({
+            "success": False,
+            "error": error_message
         }, indent=2)
