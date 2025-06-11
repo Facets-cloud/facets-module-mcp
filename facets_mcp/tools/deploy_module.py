@@ -27,8 +27,7 @@ def list_test_projects() -> str:
     if stack_names:
         return json.dumps({
             "success": True,
-            "message": "Succesfully retrieved the names of all available test projects.",
-            "instructions": f"Inform User: Choose a test project from the project list.",
+            "instructions": "If there are multiple projects available, ask the user to choose a test project from the project list. Do not pick one by yourself.",
             "data": {
                 "project_list": stack_names
             }
@@ -41,7 +40,8 @@ def list_test_projects() -> str:
 
 
 @mcp.tool()
-def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str) -> str:
+def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str,
+                                  environment_name: str = None) -> str:
     """
     Test a module that has been previewed by asking the user for the project_name where it needs to be tested.
 
@@ -54,6 +54,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         intent (str): The intent of the module to deploy
         flavor (str): The flavor of the module to deploy
         version (str): The version of the module to deploy
+        environment_name (str, optional): The specific environment name to deploy to. Provide this only if the user has asked you to.
         
     Returns:
         str: Result of the deployment operation as a JSON string
@@ -73,7 +74,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
+                    "instructions": f"Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
@@ -99,16 +100,36 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
                     "instructions": f"Inform User: No running environments found in project '{project_name}'. Launch an environment first."
                 }, indent=2)
 
-            if len(running_clusters) > 1:
-                cluster_names = [c.cluster.name for c in running_clusters]
-                return json.dumps({
-                    "success": False,
-                    "instructions": f"Inform User:  Multiple running environments found: {', '.join(cluster_names)}. This tool currently supports deploying to projects with only one running environment."
-                }, indent=2)
+            # Handle environment selection based on whether environment_name is provided
+            if environment_name:
+                # If environment_name is specified, find that specific environment
+                target_cluster = None
+                for cluster in running_clusters:
+                    if cluster.cluster.name == environment_name:
+                        target_cluster = cluster
+                        break
 
-            # Get the cluster ID of the single running cluster
-            cluster_id = running_clusters[0].cluster.id
-            cluster_name = running_clusters[0].cluster.name
+                if not target_cluster:
+                    available_envs = [c.cluster.name for c in running_clusters]
+                    return json.dumps({
+                        "success": False,
+                        "instructions": f"Inform User: Environment '{environment_name}' not found or not running in project '{project_name}'. Available running environments: {', '.join(available_envs)}"
+                    }, indent=2)
+
+                cluster_id = target_cluster.cluster.id
+                cluster_name = target_cluster.cluster.name
+            else:
+                # If environment_name is not specified
+                if len(running_clusters) > 1:
+                    cluster_names = [c.cluster.name for c in running_clusters]
+                    return json.dumps({
+                        "success": False,
+                        "instructions": f"Inform User: Multiple running environments found: {', '.join(cluster_names)}. Please specify the environment_name parameter to choose which environment to deploy to."
+                    }, indent=2)
+
+                # Only one running environment, use it
+                cluster_id = running_clusters[0].cluster.id
+                cluster_name = running_clusters[0].cluster.name
 
         except ApiException as e:
             return json.dumps({
@@ -135,7 +156,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not matching_resources:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: No matching module with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
+                    "instructions": f"Inform User: No matching resource with intent='{intent}', flavor='{flavor}', version='{version}' found in the running environment."
                 }, indent=2)
 
         except ApiException as e:
@@ -177,7 +198,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             return json.dumps({
                 "success": True,
                 "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
-                "instructions": f"Inform User: Use check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}') to monitor progress.",
+                "instructions": f"Use check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}') to monitor progress.",
                 "data": {
                     "resources_deployed": len(matching_resources),
                     "resource_names": resource_names,
@@ -243,8 +264,10 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                         "status": deployment.status,
                         "deployment_id": deployment_id,
                         "cluster_id": cluster_id,
-                        "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
-                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                        "started_at": deployment.created_at.isoformat() if hasattr(deployment,
+                                                                                   'created_at') and deployment.created_at else None,
+                        "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
+                                                                                       'completed_at') and deployment.completed_at else None,
                         "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                         "elapsed_seconds": elapsed_time,
                     },
@@ -294,13 +317,15 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
             return json.dumps({
                 "success": deployment.status == "SUCCEEDED",
                 "message": f"Deployment {deployment.status}",
-                "errors" : None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
+                "errors": None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
                 "data": {
                     "status": deployment.status,
                     "deployment_id": deployment_id,
                     "cluster_id": cluster_id,
-                    "started_at": deployment.created_at.isoformat() if hasattr(deployment, 'created_at') and deployment.created_at else None,
-                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment, 'completed_at') and deployment.completed_at else None,
+                    "started_at": deployment.created_at.isoformat() if hasattr(deployment,
+                                                                               'created_at') and deployment.created_at else None,
+                    "completed_at": deployment.completed_at.isoformat() if hasattr(deployment,
+                                                                                   'completed_at') and deployment.completed_at else None,
                     "triggered_by": deployment.triggered_by if hasattr(deployment, 'triggered_by') else None,
                     "elapsed_seconds": elapsed_time,
                 },
