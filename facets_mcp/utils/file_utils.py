@@ -57,7 +57,12 @@ def get_file_content(file_path: str) -> str:
         file_path (str): The absolute path to the file to read.
 
     Returns:
-        str: The file’s content, or a descriptive error message if reading fails.
+        str: The file's content.
+        
+    Raises:
+        UnicodeDecodeError: If file cannot be decoded with supported encodings.
+        OSError: If file cannot be accessed or read.
+        Exception: For other file reading errors.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -72,13 +77,14 @@ def get_file_content(file_path: str) -> str:
                 with open(file_path, 'r', encoding='cp1252') as f:
                     return f.read()
             except UnicodeDecodeError:
-                error_message = f"Could not read file with any supported encoding: {str(e)}"
-                return error_message
+                raise UnicodeDecodeError(
+                    e.encoding, e.object, e.start, e.end,
+                    f"Could not read file {file_path} with any supported encoding"
+                )
     except OSError as e:
-        return f"Error reading file {file_path}: {e}."
-    except Exception as file_error:
-        error_message = f"Could not read file: {str(file_error)}"
-        return error_message
+        raise OSError(f"Error reading file {file_path}: {e}")
+    except Exception as e:
+        raise Exception(f"Could not read file {file_path}: {str(e)}")
 
 def read_file_content(file_path: str, working_directory: str) -> str:
     """
@@ -90,6 +96,12 @@ def read_file_content(file_path: str, working_directory: str) -> str:
 
     Returns:
         str: The content of the file.
+        
+    Raises:
+        ValueError: If the path is outside the working directory.
+        UnicodeDecodeError: If file cannot be decoded.
+        OSError: If file cannot be accessed or read.
+        Exception: For other file reading errors.
     """
     full_file_path = ensure_path_in_working_directory(file_path, working_directory)
     return get_file_content(full_file_path)
