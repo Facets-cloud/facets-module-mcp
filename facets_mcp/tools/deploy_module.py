@@ -27,7 +27,7 @@ def list_test_projects() -> str:
     if stack_names:
         return json.dumps({
             "success": True,
-            "message": "Succesfully retrieved the names of all available test projects.",
+            "message": "Successfully retrieved the names of all available test projects.",
             "instructions": f"Inform User: Choose a test project from the project list.",
             "data": {
                 "project_list": stack_names
@@ -54,7 +54,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
         intent (str): The intent of the module to deploy
         flavor (str): The flavor of the module to deploy
         version (str): The version of the module to deploy
-        environment_name (str, optional): The specific environment name to deploy to. Provide this only if the user has asked.
+        environment_name (str, optional): The specific environment name to deploy to. Provide this only if the user has asked you to.
         
     Returns:
         str: Result of the deployment operation as a JSON string
@@ -74,7 +74,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             if not stack_info.preview_modules_allowed:
                 return json.dumps({
                     "success": False,
-                    "instructions": f"Inform User: Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
+                    "instructions": f"Project '{project_name}' does not allow preview modules. Ask the user to enable this feature in the project settings by marking it as a Test Project."
                 }, indent=2)
 
         except ApiException as e:
