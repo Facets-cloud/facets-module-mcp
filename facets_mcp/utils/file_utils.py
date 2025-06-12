@@ -6,7 +6,7 @@ Contains helper functions for safely handling files within the working directory
 import os
 import sys
 import difflib
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 def ensure_path_in_working_directory(path: str, working_directory: str) -> str:
     """
@@ -57,7 +57,12 @@ def get_file_content(file_path: str) -> str:
         file_path (str): The absolute path to the file to read.
 
     Returns:
-        str: The file’s content, or a descriptive error message if reading fails.
+        str: The file's content.
+        
+    Raises:
+        UnicodeDecodeError: If file cannot be decoded with supported encodings.
+        OSError: If file cannot be accessed or read.
+        Exception: For other file reading errors.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -72,13 +77,14 @@ def get_file_content(file_path: str) -> str:
                 with open(file_path, 'r', encoding='cp1252') as f:
                     return f.read()
             except UnicodeDecodeError:
-                error_message = f"Could not read file with any supported encoding: {str(e)}"
-                return error_message
+                raise UnicodeDecodeError(
+                    e.encoding, e.object, e.start, e.end,
+                    f"Could not read file {file_path} with any supported encoding"
+                )
     except OSError as e:
-        return f"Error reading file {file_path}: {e}."
-    except Exception as file_error:
-        error_message = f"Could not read file: {str(file_error)}"
-        return error_message
+        raise OSError(f"Error reading file {file_path}: {e}")
+    except Exception as e:
+        raise Exception(f"Could not read file {file_path}: {str(e)}")
 
 def read_file_content(file_path: str, working_directory: str) -> str:
     """
@@ -90,6 +96,12 @@ def read_file_content(file_path: str, working_directory: str) -> str:
 
     Returns:
         str: The content of the file.
+        
+    Raises:
+        ValueError: If the path is outside the working directory.
+        UnicodeDecodeError: If file cannot be decoded.
+        OSError: If file cannot be accessed or read.
+        Exception: For other file reading errors.
     """
     full_file_path = ensure_path_in_working_directory(file_path, working_directory)
     return get_file_content(full_file_path)
@@ -179,3 +191,53 @@ def write_file_safely(file_path: str, content: str, working_directory: str) -> s
         error_message = f"Error writing file: {str(e)}"
         print(error_message, file=sys.stderr)
         return error_message
+
+
+def perform_text_replacement(content: str, old_string: str, new_string: str, expected_replacements: int) -> Tuple[bool, str, str]:
+    """
+    Perform text replacement with validation of expected replacement count.
+    
+    Args:
+        content: Original file content
+        old_string: Text to find and replace
+        new_string: Replacement text
+        expected_replacements: Expected number of replacements
+        
+    Returns:
+        Tuple of (success, result_content_or_error_message, info_message)
+    """
+    if not old_string:
+        return False, "Empty search strings are not allowed", ""
+    
+    # Count occurrences
+    count = content.count(old_string)
+    
+    if count == 0:
+        # Try to find similar text for helpful error message
+        lines = content.split('\n')
+        old_lines = old_string.split('\n')
+        
+        # Look for lines that contain parts of the search text
+        similar_lines = []
+        for line in lines:
+            for old_line in old_lines:
+                if old_line.strip() and old_line.strip() in line:
+                    similar_lines.append(f"  Found similar: {line.strip()}")
+                    break
+        
+        error_msg = f"Search text not found in file"
+        if similar_lines:
+            error_msg += f". Found similar lines:\n" + "\n".join(similar_lines[:3])
+        
+        return False, error_msg, ""
+    
+    if count != expected_replacements:
+        return False, (f"Expected {expected_replacements} occurrences but found {count}. "
+                      f"If you want to replace all {count} occurrences, set expected_replacements to {count}. "
+                      f"To replace a specific occurrence, make your search string more unique by adding more context."), ""
+    
+    # Perform replacement
+    new_content = content.replace(old_string, new_string)
+    
+    success_msg = f"Successfully replaced {count} occurrence{'s' if count > 1 else ''}"
+    return True, new_content, success_msg

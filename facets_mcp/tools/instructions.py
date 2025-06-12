@@ -40,7 +40,10 @@ def FIRST_STEP_get_instructions() -> str:
                 for filename in os.listdir(directory_path):
                     if filename.endswith(".md"):
                         file_path = os.path.join(directory_path, filename)
-                        files_content[filename] = get_file_content(file_path)
+                        try:
+                            files_content[filename] = get_file_content(file_path)
+                        except Exception as e:
+                            files_content[filename] = f"Error reading file {filename}: {str(e)}"
         except Exception as e:
             files_content["_error"] = f"Error reading directory {directory_path}: {str(e)}"
 
