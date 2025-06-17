@@ -10,7 +10,7 @@ from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.yaml_utils import validate_module_output_types
 
 # Import Swagger client components
-from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 from swagger_client.rest import ApiException
 
 
@@ -131,13 +131,13 @@ def register_output_type(
 
         # Initialize the API client
         api_client = ClientUtils.get_client()
-        output_api = UiTfOutputControllerApi(api_client)
+        output_api = TFOutputManagementApi(api_client)
 
         # Check if the output already exists
         output_exists = True
         existing_output = None
         try:
-            existing_output = output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
+            existing_output = output_api.get_output_by_name(name=output_name, namespace=namespace)
         except ApiException as e:
             if e.status == 404:
                 output_exists = False

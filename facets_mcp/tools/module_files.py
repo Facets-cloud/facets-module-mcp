@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 
 from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.client_utils import ClientUtils
@@ -162,7 +162,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
 
         # Check for outputs and validate output types
         api_client = ClientUtils.get_client()
-        output_api = UiTfOutputControllerApi(api_client)
+        output_api = TFOutputManagementApi(api_client)
         output_validation_results = validate_output_types(facets_yaml, output_api)
         
         has_missing_types, error_message = check_missing_output_types(output_validation_results)
