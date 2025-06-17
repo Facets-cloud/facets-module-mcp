@@ -5,7 +5,7 @@ import json
 
 from facets_mcp.config import mcp, working_directory  # Import from config for shared resources
 from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
-from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types
+from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types, infer_properties_from_interfaces_and_attributes
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.yaml_utils import validate_module_output_types
 
@@ -87,7 +87,8 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
 @mcp.tool()
 def register_output_type(
     name: str,
-    properties: Dict[str, Any],
+    interfaces: Dict[str, Any] = None,
+    attributes: Dict[str, Any] = None,
     providers: List[Dict[str, str]] = None,
     override_confirmation: bool = False
 ) -> str:
@@ -100,7 +101,8 @@ def register_output_type(
     
     Args:
     - name (str): The name of the output type in the format '@namespace/name'.
-    - properties (Dict[str, Any]): A dictionary defining the properties of the output type, as a json schema.
+    - interfaces (Dict[str, Any], optional): A dictionary defining the output interfaces, similar to write_outputs.
+    - attributes (Dict[str, Any], optional): A dictionary defining the output attributes, similar to write_outputs.
     - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
     - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
     
@@ -108,6 +110,14 @@ def register_output_type(
     - str: A JSON string with the output from the FTF command execution, error message, or request for confirmation.
     """
     try:
+        # Validate inputs
+        if not interfaces and not attributes:
+            return json.dumps({
+                "success": False,
+                "instructions": "Please provide at least one of interfaces or attributes.",
+                "error": "Neither interfaces nor attributes provided."
+            }, indent=2)
+
         # Validate the name format
         if not name.startswith('@') or '/' not in name:
             return json.dumps({
@@ -128,6 +138,17 @@ def register_output_type(
             }, indent=2)
 
         namespace, output_name = name_parts
+
+        # Infer properties from interfaces and attributes
+        properties = infer_properties_from_interfaces_and_attributes(interfaces, attributes)
+        
+        if "error" in properties:
+            return json.dumps({
+                "success": False,
+                "message": "Failed to infer properties from interfaces and attributes.",
+                "instructions": "Inform User: Failed to infer properties from interfaces and attributes.",
+                "error": properties["error"]
+            }, indent=2)
 
         # Initialize the API client
         api_client = ClientUtils.get_client()

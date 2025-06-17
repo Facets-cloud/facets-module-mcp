@@ -37,7 +37,7 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation.                                                    |
 | `validate_module`                        | Validates a Terraform module directory using FTF CLI standards and checks output types.                                                 |
 | `push_preview_module_to_facets_cp`       | Previews a module by pushing a test version to the control plane with git context extracted automatically.                             |
-| `register_output_type`                   | Registers a new output type in the Facets control plane with properties and providers.                                                  |
+| `register_output_type`                   | Registers a new output type in the Facets control plane with interfaces and attributes and providers.                                                  |
 | `get_output_type_details`                | Retrieves details for a specific output type from the Facets control plane.                                                             |
 | `find_output_types_with_provider`        | Finds all output types that include a specific provider source for module configurations.                                               |
 | `get_local_modules`                      | Scans and lists all local Terraform modules by searching for `facets.yaml` recursively, including loading outputs.tf content if present. |

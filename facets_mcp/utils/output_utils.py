@@ -150,6 +150,106 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
         return json.dumps({"status": "error", "message": error_message})
 
 
+def infer_properties_from_interfaces_and_attributes(
+    interfaces: Dict[str, Any] = None,
+    attributes: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """
+    Infer JSON schema properties from output interfaces and attributes.
+    
+    Args:
+        interfaces (Dict[str, Any], optional): Dictionary of output interfaces
+        attributes (Dict[str, Any], optional): Dictionary of output attributes
+        
+    Returns:
+        Dict[str, Any]: JSON schema properties definition
+    """
+    try:
+        properties = {
+            "type": "object",
+            "properties": {}
+        }
+        
+        # Add attributes to properties
+        if attributes:
+            for attr_name, attr_value in attributes.items():
+                # Infer type from value or set as string if we can't determine
+                attr_type = "string"  # default type
+                
+                if isinstance(attr_value, bool):
+                    attr_type = "boolean"
+                elif isinstance(attr_value, int):
+                    attr_type = "integer"
+                elif isinstance(attr_value, float):
+                    attr_type = "number"
+                elif isinstance(attr_value, list):
+                    attr_type = "array"
+                elif isinstance(attr_value, dict):
+                    attr_type = "object"
+                
+                properties["properties"][attr_name] = {
+                    "type": attr_type,
+                    "description": f"Output attribute: {attr_name}"
+                }
+        
+        # Add interfaces to properties
+        if interfaces:
+            for interface_name, interface_value in interfaces.items():
+                if isinstance(interface_value, dict):
+                    # Interface is an object with nested properties
+                    interface_properties = {}
+                    for prop_name, prop_value in interface_value.items():
+                        prop_type = "string"  # default type
+                        
+                        if isinstance(prop_value, bool):
+                            prop_type = "boolean"
+                        elif isinstance(prop_value, int):
+                            prop_type = "integer"
+                        elif isinstance(prop_value, float):
+                            prop_type = "number"
+                        elif isinstance(prop_value, list):
+                            prop_type = "array"
+                        elif isinstance(prop_value, dict):
+                            prop_type = "object"
+                        
+                        interface_properties[prop_name] = {
+                            "type": prop_type,
+                            "description": f"Interface property: {prop_name}"
+                        }
+                    
+                    properties["properties"][interface_name] = {
+                        "type": "object",
+                        "properties": interface_properties,
+                        "description": f"Output interface: {interface_name}"
+                    }
+                else:
+                    # Interface is a simple value
+                    interface_type = "string"  # default type
+                    
+                    if isinstance(interface_value, bool):
+                        interface_type = "boolean"
+                    elif isinstance(interface_value, int):
+                        interface_type = "integer"
+                    elif isinstance(interface_value, float):
+                        interface_type = "number"
+                    elif isinstance(interface_value, list):
+                        interface_type = "array"
+                    elif isinstance(interface_value, dict):
+                        interface_type = "object"
+                    
+                    properties["properties"][interface_name] = {
+                        "type": interface_type,
+                        "description": f"Output interface: {interface_name}"
+                    }
+        
+        return properties
+    
+    except Exception as e:
+        error_message = f"Error inferring properties from interfaces and attributes: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return {"error": error_message}
+
+
 def prepare_output_type_registration(
     name: str,
     properties: Dict[str, Any],
