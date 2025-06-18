@@ -116,7 +116,7 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
         # Format the response
         formatted_outputs = []
         for output in response:
-            output_data = {
+            output_data: Dict[str, Any] = {
                 "name": f"{output.namespace}/{output.name}"
             }
             
@@ -150,9 +150,33 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
         return json.dumps({"status": "error", "message": error_message})
 
 
+def _infer_json_type(value: Any) -> str:
+    """
+    Infer JSON schema type from a Python value.
+    
+    Args:
+        value: The Python value to infer type from
+        
+    Returns:
+        str: The JSON schema type
+    """
+    if isinstance(value, bool):
+        return "boolean"
+    elif isinstance(value, int):
+        return "integer"
+    elif isinstance(value, float):
+        return "number"
+    elif isinstance(value, list):
+        return "array"
+    elif isinstance(value, dict):
+        return "object"
+    else:
+        return "string"  # default type
+
+
 def infer_properties_from_interfaces_and_attributes(
-    interfaces: Dict[str, Any] = None,
-    attributes: Dict[str, Any] = None,
+    interfaces: Optional[Dict[str, Any]] = None,
+    attributes: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Infer JSON schema properties from output interfaces and attributes.
@@ -173,22 +197,8 @@ def infer_properties_from_interfaces_and_attributes(
         # Add attributes to properties
         if attributes:
             for attr_name, attr_value in attributes.items():
-                # Infer type from value or set as string if we can't determine
-                attr_type = "string"  # default type
-                
-                if isinstance(attr_value, bool):
-                    attr_type = "boolean"
-                elif isinstance(attr_value, int):
-                    attr_type = "integer"
-                elif isinstance(attr_value, float):
-                    attr_type = "number"
-                elif isinstance(attr_value, list):
-                    attr_type = "array"
-                elif isinstance(attr_value, dict):
-                    attr_type = "object"
-                
                 properties["properties"][attr_name] = {
-                    "type": attr_type,
+                    "type": _infer_json_type(attr_value),
                     "description": f"Output attribute: {attr_name}"
                 }
         
@@ -199,21 +209,8 @@ def infer_properties_from_interfaces_and_attributes(
                     # Interface is an object with nested properties
                     interface_properties = {}
                     for prop_name, prop_value in interface_value.items():
-                        prop_type = "string"  # default type
-                        
-                        if isinstance(prop_value, bool):
-                            prop_type = "boolean"
-                        elif isinstance(prop_value, int):
-                            prop_type = "integer"
-                        elif isinstance(prop_value, float):
-                            prop_type = "number"
-                        elif isinstance(prop_value, list):
-                            prop_type = "array"
-                        elif isinstance(prop_value, dict):
-                            prop_type = "object"
-                        
                         interface_properties[prop_name] = {
-                            "type": prop_type,
+                            "type": _infer_json_type(prop_value),
                             "description": f"Interface property: {prop_name}"
                         }
                     
@@ -224,21 +221,8 @@ def infer_properties_from_interfaces_and_attributes(
                     }
                 else:
                     # Interface is a simple value
-                    interface_type = "string"  # default type
-                    
-                    if isinstance(interface_value, bool):
-                        interface_type = "boolean"
-                    elif isinstance(interface_value, int):
-                        interface_type = "integer"
-                    elif isinstance(interface_value, float):
-                        interface_type = "number"
-                    elif isinstance(interface_value, list):
-                        interface_type = "array"
-                    elif isinstance(interface_value, dict):
-                        interface_type = "object"
-                    
                     properties["properties"][interface_name] = {
-                        "type": interface_type,
+                        "type": _infer_json_type(interface_value),
                         "description": f"Output interface: {interface_name}"
                     }
         
@@ -253,7 +237,7 @@ def infer_properties_from_interfaces_and_attributes(
 def prepare_output_type_registration(
     name: str,
     properties: Dict[str, Any],
-    providers: List[Dict[str, str]] = None,
+    providers: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
     """
     Prepare data for registering a new output type.
@@ -305,7 +289,7 @@ def prepare_output_type_registration(
         return {"error": error_message}
 
 
-def compare_output_types(existing_output: Any, new_properties: Dict[str, Any], new_providers: List[Dict[str, str]] = None) -> Dict[str, Any]:
+def compare_output_types(existing_output: Any, new_properties: Dict[str, Any], new_providers: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     """
     Compare existing output type with new properties and providers.
     
