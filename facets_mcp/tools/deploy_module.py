@@ -48,7 +48,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
     
     This tool checks if the project exists, verifies if it supports preview modules,
-    and then does terraform apply. You can check logs for the apply using get_deployment_logs_by_trace_id, and check the status of the deployment using check_deployment_status_by_trace_id.
+    and then does terraform apply. You can check logs for the apply using get_deployment_logs, and check the status of the deployment using check_deployment_status.
 
     Args:
         project_name (str): The name of the test project (stack) to deploy to
@@ -203,7 +203,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             return json.dumps({
                 "success": True,
                 "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
-                "instructions": f"Use check_deployment_status_by_trace_id(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to monitor progress. Use get_deployment_logs_by_trace_id(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to get logs.",
+                "instructions": f"Use check_deployment_status(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to monitor progress. Use get_deployment_logs(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to get logs.",
                 "data": {
                     "resources_deployed": len(matching_resources),
                     "resource_names": resource_names,
@@ -351,7 +351,7 @@ def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool =
     except Exception as e:
         return json.dumps({
             "success": False,
-            "error": f"Error in check_deployment_status_by_trace_id tool: {str(e)}",
+            "error": f"Error in check_deployment_status tool: {str(e)}",
         }, indent=2)
 
 
