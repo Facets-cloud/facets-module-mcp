@@ -1,6 +1,7 @@
 import json
 import sys
 import time
+import uuid
 
 from swagger_client.api.ui_deployment_controller_api import UiDeploymentControllerApi
 from swagger_client.api.ui_dropdowns_controller_api import UiDropdownsControllerApi
@@ -47,7 +48,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
     
     This tool checks if the project exists, verifies if it supports preview modules,
-    and then does terraform apply. You can check logs for the apply using get_deployment_logs, and check the status of the deployment using check_deployment_status.
+    and then does terraform apply. You can check logs for the apply using get_deployment_logs_by_trace_id, and check the status of the deployment using check_deployment_status_by_trace_id.
 
     Args:
         project_name (str): The name of the test project (stack) to deploy to
@@ -167,6 +168,9 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
         # Step 4: Deploy the module by triggering hotfix deployment
         try:
+            # Generate a unique release trace ID
+            release_trace_id = str(uuid.uuid4())
+            
             # Create facets resources for all matching resources
             facets_resources = []
             for selected_resource in matching_resources:
@@ -179,17 +183,18 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             recipe = HotfixDeploymentRecipe()
             recipe.resource_list = facets_resources
 
-            # Call hotfix deployment API
+            # Call hotfix deployment API with release trace ID
             result = deployment_api.run_hotfix_deployment_recipe(
                 body=recipe,
                 cluster_id=cluster_id,
                 allow_destroy=False,
                 force_release=True,
-                is_plan=False
+                is_plan=False,
+                can_queue=True,
+                release_trace_id=release_trace_id
             )
 
-            # Get the deployment ID from the result
-            deployment_id = result.id if hasattr(result, 'id') else None
+            # Get the initial status from the result
             initial_status = result.status if hasattr(result, 'status') else None
 
             # Creating resource_names for display in the success message
@@ -198,11 +203,11 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             return json.dumps({
                 "success": True,
                 "message": f"Successfully triggered deployment of {len(matching_resources)} modules with intent='{intent}', flavor='{flavor}', version='{version}' to environment '{cluster_name}' in project '{project_name}'.",
-                "instructions": f"Use check_deployment_status(cluster_id='{cluster_id}', deployment_id='{deployment_id}') to monitor progress.",
+                "instructions": f"Use check_deployment_status_by_trace_id(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to monitor progress. Use get_deployment_logs_by_trace_id(cluster_id='{cluster_id}', release_trace_id='{release_trace_id}') to get logs.",
                 "data": {
                     "resources_deployed": len(matching_resources),
                     "resource_names": resource_names,
-                    "deployment_id": deployment_id,
+                    "release_trace_id": release_trace_id,
                     "status": initial_status,
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
@@ -224,14 +229,14 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
 
 @mcp.tool()
-def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = False, timeout_seconds: int = 300,
+def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool = False, timeout_seconds: int = 300,
                             poll_interval_seconds: int = 5) -> str:
     """
     Check the status of a deployment.
 
     Args:
         cluster_id (str): The ID of the environment where the deployment is running
-        deployment_id (str): The ID of the deployment to check
+        release_trace_id (str): The release trace ID of the deployment to check
         wait (bool): If True, wait for the deployment to complete (either succeed or fail)
         timeout_seconds (int): Maximum time to wait for completion in seconds (default: 300s / 5min)
         poll_interval_seconds (int): Time between status checks in seconds (default: 5s)
@@ -250,19 +255,19 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
         # Initial status check
         try:
-            deployment = deployment_api.get_deployment(
+            deployment = deployment_api.get_deployment_by_release_trace_id(
                 cluster_id=cluster_id,
-                deployment_id=deployment_id
+                release_trace_id=release_trace_id
             )
 
-            if not wait or (deployment.status != "IN_PROGRESS" and deployment.status != "STARTED"):
+            if not wait or (deployment.status != "IN_PROGRESS" and deployment.status != "STARTED" and deployment.status != "QUEUED"):
                 # Return immediately if not waiting or if already complete
                 return json.dumps({
                     "success": True,
                     "message": f"Deployment {deployment.status}",
                     "data": {
                         "status": deployment.status,
-                        "deployment_id": deployment_id,
+                        "release_trace_id": release_trace_id,
                         "cluster_id": cluster_id,
                         "started_at": deployment.created_at.isoformat() if hasattr(deployment,
                                                                                    'created_at') and deployment.created_at else None,
@@ -275,7 +280,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
             # If we're waiting, poll until completion or timeout
             while (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED") and elapsed_time < timeout_seconds:
+                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED" or deployment.status == "QUEUED") and elapsed_time < timeout_seconds:
                 # Sleep for poll interval
                 time.sleep(poll_interval_seconds)
 
@@ -284,16 +289,16 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
                 try:
                     # Check status again
-                    deployment = deployment_api.get_deployment(
+                    deployment = deployment_api.get_deployment_by_release_trace_id(
                         cluster_id=cluster_id,
-                        deployment_id=deployment_id
+                        release_trace_id=release_trace_id
                     )
                 except ApiException as e:
                     return json.dumps({
                         "success": False,
                         "error": f"Error checking deployment status: {str(e)}",
                         "data": {
-                            "deployment_id": deployment_id,
+                            "release_trace_id": release_trace_id,
                             "cluster_id": cluster_id,
                             "elapsed_seconds": elapsed_time,
                         },
@@ -301,13 +306,13 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
             # Check if we timed out
             if elapsed_time >= timeout_seconds and (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED"):
+                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED" or deployment.status == "QUEUED"):
                 return json.dumps({
                     "success": False,
                     "error": f"Timed out after {timeout_seconds} seconds. Deployment still in progress.",
                     "data": {
                         "status": deployment.status,
-                        "deployment_id": deployment_id,
+                        "release_trace_id": release_trace_id,
                         "cluster_id": cluster_id,
                         "elapsed_seconds": elapsed_time,
                     },
@@ -320,7 +325,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
                 "errors": None if deployment.status == "SUCCEEDED" else f"Deployment ended with status: {deployment.status}",
                 "data": {
                     "status": deployment.status,
-                    "deployment_id": deployment_id,
+                    "release_trace_id": release_trace_id,
                     "cluster_id": cluster_id,
                     "started_at": deployment.created_at.isoformat() if hasattr(deployment,
                                                                                'created_at') and deployment.created_at else None,
@@ -335,7 +340,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "error": f"Deployment not found: {deployment_id}",
+                    "error": f"Deployment not found: {release_trace_id}",
                 }, indent=2)
             else:
                 return json.dumps({
@@ -346,18 +351,18 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
     except Exception as e:
         return json.dumps({
             "success": False,
-            "error": f"Error in check_deployment_status tool: {str(e)}",
+            "error": f"Error in check_deployment_status_by_trace_id tool: {str(e)}",
         }, indent=2)
 
 
 @mcp.tool()
-def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
+def get_deployment_logs(cluster_id: str, release_trace_id: str) -> str:
     """
     Get logs for a specific deployment.
 
     Args:
         cluster_id (str): The ID of the environment where the deployment is running
-        deployment_id (str): The ID of the deployment to get logs for
+        release_trace_id (str): The release trace ID of the deployment to get logs for
 
     Returns:
         str: JSON with deployment logs
@@ -368,7 +373,21 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
         deployment_api = UiDeploymentControllerApi(api_client)
 
         try:
-            # Get deployment logs
+            # First get the deployment to find the deployment ID
+            deployment = deployment_api.get_deployment_by_release_trace_id(
+                cluster_id=cluster_id,
+                release_trace_id=release_trace_id
+            )
+            
+            deployment_id = deployment.id if hasattr(deployment, 'id') else None
+            
+            if not deployment_id:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Deployment ID not found for release trace ID: {release_trace_id}",
+                }, indent=2)
+
+            # Get deployment logs using the deployment ID
             logs_response = deployment_api.get_deployment_logs(
                 cluster_id=cluster_id,
                 deployment_id=deployment_id
@@ -385,20 +404,13 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
                 formatted_logs.append(log.get("message"))
 
             # Get current deployment status
-            try:
-                deployment = deployment_api.get_deployment(
-                    cluster_id=cluster_id,
-                    deployment_id=deployment_id
-                )
-                status = deployment.status if hasattr(deployment, 'status') else "UNKNOWN"
-            except ApiException:
-                status = "UNKNOWN"
+            status = deployment.status if hasattr(deployment, 'status') else "UNKNOWN"
 
             return json.dumps({
                 "success": True,
-                "message": f"Successfully retrieved logs for deployment {deployment_id}.",
+                "message": f"Successfully retrieved logs for deployment {release_trace_id}.",
                 "data": {
-                    "deployment_id": deployment_id,
+                    "release_trace_id": release_trace_id,
                     "cluster_id": cluster_id,
                     "status": status,
                     "log_count": len(formatted_logs),
@@ -410,7 +422,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
             if e.status == 404:
                 return json.dumps({
                     "success": False,
-                    "error": f"Deployment not found: {deployment_id}",
+                    "error": f"Deployment not found: {release_trace_id}",
                 }, indent=2)
             else:
                 return json.dumps({
