@@ -409,7 +409,7 @@ def write_outputs(module_path: str, output_attributes: dict = {}, output_interfa
 
         # Initialize API client for validation
         api_client = ClientUtils.get_client()
-        output_api = UiTfOutputControllerApi(api_client)
+        output_api = TFOutputManagementApi(api_client)
 
         # Read and validate facets.yaml
         success, facets_yaml_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
