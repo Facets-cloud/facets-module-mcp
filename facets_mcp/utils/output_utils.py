@@ -10,7 +10,7 @@ import yaml
 import tempfile
 from typing import Dict, Any, List, Optional
 
-from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
+from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 from swagger_client.rest import ApiException
 from facets_mcp.utils.client_utils import ClientUtils
 
@@ -40,10 +40,10 @@ def get_output_type_details_from_api(output_type: str) -> Dict[str, Any]:
         # Initialize the API client
         try:
             api_client = ClientUtils.get_client()
-            output_api = UiTfOutputControllerApi(api_client)
+            output_api = TFOutputManagementApi(api_client)
             
             # Get output type details
-            output_details = output_api.get_output_by_name_using_get(name=output_name, namespace=namespace)
+            output_details = output_api.get_output_by_name(name=output_name, namespace=namespace)
             
             # Convert the response object to a dictionary
             if output_details:
@@ -105,10 +105,10 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
     try:
         # Initialize API client
         api_client = ClientUtils.get_client()
-        output_api = UiTfOutputControllerApi(api_client)
+        output_api = TFOutputManagementApi(api_client)
         
         # Call the API method to get outputs by provider source
-        response = output_api.get_outputs_by_provider_source_using_get(source=provider_source)
+        response = output_api.get_outputs_by_provider_source(source=provider_source)
         
         if not response:
             return json.dumps({"status": "success", "message": "No output types found for the specified provider source.", "outputs": []})
