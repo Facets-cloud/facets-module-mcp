@@ -22,7 +22,7 @@ def list_test_projects() -> str:
         str: A JSON string containing success message and list of all test projects or error message
     """
     api_instance = UiStackControllerApi(ClientUtils.get_client())
-    stacks = api_instance.get_stacks_using_get1()
+    stacks = api_instance.get_stacks()
     stack_names = [stack.name for stack in stacks if stack.preview_modules_allowed]
     if stack_names:
         return json.dumps({
@@ -68,7 +68,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
         # Step 1: Check if the project (stack) exists and supports preview modules
         try:
-            stack_info = stack_api.get_stack_using_get(stack_name=project_name)
+            stack_info = stack_api.get_stack(stack_name=project_name)
 
             # Check if allowPreviewModules is enabled
             if not stack_info.preview_modules_allowed:
@@ -91,7 +91,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
         # Step 2: Get the running environments (clusters) of the project
         try:
-            clusters = stack_api.get_clusters_overview_using_get(stack_name=project_name)
+            clusters = stack_api.get_clusters_overview(stack_name=project_name)
             running_clusters = [c for c in clusters if c.cluster_state == "RUNNING"]
 
             if not running_clusters:
@@ -139,7 +139,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
 
         # Step 3: Get all resources for the cluster
         try:
-            resources = dropdowns_api.get_all_resources_by_cluster_using_get(cluster_id=cluster_id)
+            resources = dropdowns_api.get_all_resources_by_cluster(cluster_id=cluster_id)
 
             # Filter resources by the specified intent (resourceType)
             matching_resources = []
@@ -180,7 +180,7 @@ def test_already_previewed_module(project_name: str, intent: str, flavor: str, v
             recipe.resource_list = facets_resources
 
             # Call hotfix deployment API
-            result = deployment_api.run_hotfix_deployment_recipe_using_post(
+            result = deployment_api.run_hotfix_deployment_recipe(
                 body=recipe,
                 cluster_id=cluster_id,
                 allow_destroy=False,
@@ -250,7 +250,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
         # Initial status check
         try:
-            deployment = deployment_api.get_deployment_using_get(
+            deployment = deployment_api.get_deployment(
                 cluster_id=cluster_id,
                 deployment_id=deployment_id
             )
@@ -284,7 +284,7 @@ def check_deployment_status(cluster_id: str, deployment_id: str, wait: bool = Fa
 
                 try:
                     # Check status again
-                    deployment = deployment_api.get_deployment_using_get(
+                    deployment = deployment_api.get_deployment(
                         cluster_id=cluster_id,
                         deployment_id=deployment_id
                     )
@@ -369,7 +369,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
         try:
             # Get deployment logs
-            logs_response = deployment_api.get_deployment_logs_using_get(
+            logs_response = deployment_api.get_deployment_logs(
                 cluster_id=cluster_id,
                 deployment_id=deployment_id
             )
@@ -386,7 +386,7 @@ def get_deployment_logs(cluster_id: str, deployment_id: str) -> str:
 
             # Get current deployment status
             try:
-                deployment = deployment_api.get_deployment_using_get(
+                deployment = deployment_api.get_deployment(
                     cluster_id=cluster_id,
                     deployment_id=deployment_id
                 )
