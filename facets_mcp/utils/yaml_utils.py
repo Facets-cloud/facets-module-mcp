@@ -105,7 +105,7 @@ def validate_output_types(facets_yaml_content: str, output_api=None) -> Dict[str
         
         # Get all outputs from the API in a single call
         try:
-            all_existing_outputs = output_api.get_all_outputs_using_get()
+            all_existing_outputs = output_api.get_all_outputs()
             # Create a set of existing output identifiers for fast lookup
             existing_output_ids = set()
             for output in all_existing_outputs:
@@ -264,8 +264,8 @@ def validate_module_output_types(module_path: str) -> Tuple[bool, str]:
     try:
         # Initialize API client for output type validation
         api_client = ClientUtils.get_client()
-        from swagger_client.api.ui_tf_output_controller_api import UiTfOutputControllerApi
-        output_api = UiTfOutputControllerApi(api_client)
+        from swagger_client.api.tf_output_management_api import TFOutputManagementApi
+        output_api = TFOutputManagementApi(api_client)
         
         # Read and validate facets.yaml
         success, facets_content, error_message = read_and_validate_facets_yaml(module_path, output_api)
