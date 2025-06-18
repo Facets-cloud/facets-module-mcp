@@ -116,7 +116,7 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
         # Format the response
         formatted_outputs = []
         for output in response:
-            output_data = {
+            output_data: Dict[str, Any] = {
                 "name": f"{output.namespace}/{output.name}"
             }
             
@@ -150,10 +150,94 @@ def find_output_types_with_provider_from_api(provider_source: str) -> str:
         return json.dumps({"status": "error", "message": error_message})
 
 
+def _infer_json_type(value: Any) -> str:
+    """
+    Infer JSON schema type from a Python value.
+    
+    Args:
+        value: The Python value to infer type from
+        
+    Returns:
+        str: The JSON schema type
+    """
+    if isinstance(value, bool):
+        return "boolean"
+    elif isinstance(value, int):
+        return "integer"
+    elif isinstance(value, float):
+        return "number"
+    elif isinstance(value, list):
+        return "array"
+    elif isinstance(value, dict):
+        return "object"
+    else:
+        return "string"  # default type
+
+
+def infer_properties_from_interfaces_and_attributes(
+    interfaces: Optional[Dict[str, Any]] = None,
+    attributes: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Infer JSON schema properties from output interfaces and attributes.
+    
+    Args:
+        interfaces (Dict[str, Any], optional): Dictionary of output interfaces
+        attributes (Dict[str, Any], optional): Dictionary of output attributes
+        
+    Returns:
+        Dict[str, Any]: JSON schema properties definition
+    """
+    try:
+        properties = {
+            "type": "object",
+            "properties": {}
+        }
+        
+        # Add attributes to properties
+        if attributes:
+            for attr_name, attr_value in attributes.items():
+                properties["properties"][attr_name] = {
+                    "type": _infer_json_type(attr_value),
+                    "description": f"Output attribute: {attr_name}"
+                }
+        
+        # Add interfaces to properties
+        if interfaces:
+            for interface_name, interface_value in interfaces.items():
+                if isinstance(interface_value, dict):
+                    # Interface is an object with nested properties
+                    interface_properties = {}
+                    for prop_name, prop_value in interface_value.items():
+                        interface_properties[prop_name] = {
+                            "type": _infer_json_type(prop_value),
+                            "description": f"Interface property: {prop_name}"
+                        }
+                    
+                    properties["properties"][interface_name] = {
+                        "type": "object",
+                        "properties": interface_properties,
+                        "description": f"Output interface: {interface_name}"
+                    }
+                else:
+                    # Interface is a simple value
+                    properties["properties"][interface_name] = {
+                        "type": _infer_json_type(interface_value),
+                        "description": f"Output interface: {interface_name}"
+                    }
+        
+        return properties
+    
+    except Exception as e:
+        error_message = f"Error inferring properties from interfaces and attributes: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return {"error": error_message}
+
+
 def prepare_output_type_registration(
     name: str,
     properties: Dict[str, Any],
-    providers: List[Dict[str, str]] = None,
+    providers: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
     """
     Prepare data for registering a new output type.
@@ -205,7 +289,7 @@ def prepare_output_type_registration(
         return {"error": error_message}
 
 
-def compare_output_types(existing_output: Any, new_properties: Dict[str, Any], new_providers: List[Dict[str, str]] = None) -> Dict[str, Any]:
+def compare_output_types(existing_output: Any, new_properties: Dict[str, Any], new_providers: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     """
     Compare existing output type with new properties and providers.
     
