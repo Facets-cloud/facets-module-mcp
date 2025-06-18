@@ -244,6 +244,9 @@ def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool =
     Returns:
         str: JSON with deployment status information
     """
+    # Define in-progress states
+    IN_PROGRESS_STATES = {"IN_PROGRESS", "STARTED", "QUEUED"}
+    
     try:
         # Initialize API client
         api_client = ClientUtils.get_client()
@@ -260,7 +263,7 @@ def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool =
                 release_trace_id=release_trace_id
             )
 
-            if not wait or (deployment.status != "IN_PROGRESS" and deployment.status != "STARTED" and deployment.status != "QUEUED"):
+            if not wait or deployment.status not in IN_PROGRESS_STATES:
                 # Return immediately if not waiting or if already complete
                 return json.dumps({
                     "success": True,
@@ -279,8 +282,7 @@ def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool =
                 }, indent=2)
 
             # If we're waiting, poll until completion or timeout
-            while (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED" or deployment.status == "QUEUED") and elapsed_time < timeout_seconds:
+            while deployment.status in IN_PROGRESS_STATES and elapsed_time < timeout_seconds:
                 # Sleep for poll interval
                 time.sleep(poll_interval_seconds)
 
@@ -305,8 +307,7 @@ def check_deployment_status(cluster_id: str, release_trace_id: str, wait: bool =
                     }, indent=2)
 
             # Check if we timed out
-            if elapsed_time >= timeout_seconds and (
-                    deployment.status == "IN_PROGRESS" or deployment.status == "STARTED" or deployment.status == "QUEUED"):
+            if elapsed_time >= timeout_seconds and deployment.status in IN_PROGRESS_STATES:
                 return json.dumps({
                     "success": False,
                     "error": f"Timed out after {timeout_seconds} seconds. Deployment still in progress.",
