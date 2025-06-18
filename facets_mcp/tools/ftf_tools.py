@@ -1,5 +1,5 @@
 import sys
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import os
 import json
 
@@ -87,9 +87,9 @@ def generate_module_with_user_confirmation(intent: str, flavor: str, cloud: str,
 @mcp.tool()
 def register_output_type(
     name: str,
-    interfaces: Dict[str, Any] = None,
-    attributes: Dict[str, Any] = None,
-    providers: List[Dict[str, str]] = None,
+    interfaces: Optional[Dict[str, Any]] = None,
+    attributes: Optional[Dict[str, Any]] = None,
+    providers: Optional[List[Dict[str, str]]] = None,
     override_confirmation: bool = False
 ) -> str:
     """
@@ -111,7 +111,7 @@ def register_output_type(
     """
     try:
         # Validate inputs
-        if not interfaces and not attributes:
+        if interfaces is None and attributes is None:
             return json.dumps({
                 "success": False,
                 "instructions": "Please provide at least one of interfaces or attributes.",
