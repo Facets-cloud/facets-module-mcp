@@ -387,6 +387,47 @@ def find_output_types_with_provider(provider_source: str) -> str:
         }, indent=2)
 
 
+@mcp.tool()
+def list_all_output_types() -> str:
+    """
+    List all output types from the Facets control plane.
+
+    Returns:
+        str: List of output types.
+    """
+    try:
+        api_client = ClientUtils.get_client()
+        output_api = TFOutputManagementApi(api_client)
+        response = output_api.get_all_outputs()
+        if not response:
+            return json.dumps({
+                "success": True,
+                "message": "No output types found.",
+                "data": {"output_names": []}
+            }, indent=2)
+        if not isinstance(response, list):
+            response = [response]
+        output_names = []
+        for output in response:
+            namespace = getattr(output, 'namespace', None) or '@outputs'
+            name = getattr(output, 'name', None)
+            if namespace and name:
+                output_names.append(f"{namespace}/{name}")
+        return json.dumps({
+            "success": True,
+            "message": f"Found {len(output_names)} output type(s).",
+            "data": {"output_names": output_names, "count": len(output_names)}
+        }, indent=2)
+    except Exception as e:
+        error_message = f"Error listing all output types: {str(e)}"
+        print(error_message, file=sys.stderr)
+        return json.dumps({
+            "success": False,
+            "message": "Failed to list all output types.",
+            "instructions": "Inform User: Failed to list all output types.",
+            "error": error_message
+        }, indent=2)
+
 
 @mcp.tool()
 def write_outputs(module_path: str, output_attributes: dict = {}, output_interfaces: dict = {}) -> str:
