@@ -2,6 +2,7 @@ import json
 import sys
 import time
 import uuid
+from typing import Optional
 
 from swagger_client.api.ui_deployment_controller_api import UiDeploymentControllerApi
 from swagger_client.api.ui_dropdowns_controller_api import UiDropdownsControllerApi
@@ -42,7 +43,7 @@ def list_test_projects() -> str:
 
 @mcp.tool()
 def test_already_previewed_module(project_name: str, intent: str, flavor: str, version: str,
-                                  environment_name: str = None) -> str:
+                                  environment_name: Optional[str] = None) -> str:
     """
     Test a module that has been previewed by asking the user for the project_name where it needs to be tested.
 
