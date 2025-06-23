@@ -193,38 +193,43 @@ def infer_properties_from_interfaces_and_attributes(
             "type": "object",
             "properties": {}
         }
-        
-        # Add attributes to properties
-        if attributes:
-            for attr_name, attr_value in attributes.items():
-                properties["properties"][attr_name] = {
-                    "type": _infer_json_type(attr_value),
-                    "description": f"Output attribute: {attr_name}"
-                }
-        
-        # Add interfaces to properties
-        if interfaces:
-            for interface_name, interface_value in interfaces.items():
-                if isinstance(interface_value, dict):
-                    # Interface is an object with nested properties
-                    interface_properties = {}
-                    for prop_name, prop_value in interface_value.items():
-                        interface_properties[prop_name] = {
+
+        def _create_schema_for_items(items: Dict[str, Any], item_type_str: str) -> Dict[str, Any]:
+            processed_items = {}
+            for item_name, item_value in items.items():
+                if isinstance(item_value, dict):
+                    # Item is an object with nested properties
+                    nested_properties = {}
+                    for prop_name, prop_value in item_value.items():
+                        nested_properties[prop_name] = {
                             "type": _infer_json_type(prop_value),
-                            "description": f"Interface property: {prop_name}"
+                            "description": f"{item_type_str.capitalize()} property: {prop_name}"
                         }
                     
-                    properties["properties"][interface_name] = {
+                    processed_items[item_name] = {
                         "type": "object",
-                        "properties": interface_properties,
-                        "description": f"Output interface: {interface_name}"
+                        "properties": nested_properties,
+                        "description": f"Output {item_type_str}: {item_name}"
                     }
                 else:
-                    # Interface is a simple value
-                    properties["properties"][interface_name] = {
-                        "type": _infer_json_type(interface_value),
-                        "description": f"Output interface: {interface_name}"
+                    # Item is a simple value
+                    processed_items[item_name] = {
+                        "type": _infer_json_type(item_value),
+                        "description": f"Output {item_type_str}: {item_name}"
                     }
+            return processed_items
+
+        if attributes:
+            properties["properties"]["attributes"] = {
+                "type": "object",
+                "properties": _create_schema_for_items(attributes, "attribute")
+            }
+        
+        if interfaces:
+            properties["properties"]["interfaces"] = {
+                "type": "object",
+                "properties": _create_schema_for_items(interfaces, "interface")
+            }
         
         return properties
     
