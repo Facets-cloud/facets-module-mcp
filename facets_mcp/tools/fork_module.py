@@ -2,8 +2,6 @@ import json
 import os
 import sys
 import yaml
-from pathlib import Path
-from typing import Optional
 
 from swagger_client.api.module_management_api import ModuleManagementApi
 from swagger_client.rest import ApiException
@@ -12,6 +10,172 @@ from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.file_utils import ensure_path_in_working_directory
 from facets_mcp.utils.module_download_utils import download_and_extract_module_zip
+
+
+def _get_source_module_details(module_id: str) -> tuple[bool, dict, str]:
+    """
+    Get source module details from the control plane.
+    
+    Args:
+        module_id (str): ID of the module to get details for
+        
+    Returns:
+        tuple[bool, dict, str]: (success, module_data, error_message)
+    """
+    try:
+        api_client = ClientUtils.get_client()
+        modules_api = ModuleManagementApi(api_client)
+        
+        modules = modules_api.get_all_modules()
+        source_module = None
+        for module in modules:
+            if module.id == module_id:
+                source_module = module
+                break
+        
+        if not source_module:
+            return False, {}, f"Module with ID '{module_id}' not found"
+        
+        # Extract intent name
+        intent_name = ""
+        if source_module.intent_details and hasattr(source_module.intent_details, 'name'):
+            intent_name = source_module.intent_details.name
+        else:
+            return False, {}, "Source module has no valid intent details"
+        
+        module_data = {
+            "id": source_module.id,
+            "intent": intent_name,
+            "flavor": source_module.flavor,
+            "version": source_module.version
+        }
+        
+        return True, module_data, ""
+        
+    except ApiException as e:
+        return False, {}, f"API error: {str(e)}"
+    except Exception as e:
+        return False, {}, f"Error retrieving module details: {str(e)}"
+
+
+def _perform_dry_run(source_module: dict, target_info: dict) -> dict:
+    """
+    Perform dry run validation and return dry run response.
+    
+    Args:
+        source_module (dict): Source module information
+        target_info (dict): Target module information including path
+        
+    Returns:
+        dict: Dry run response data
+    """
+    target_exists = os.path.exists(target_info["full_path"])
+    
+    return {
+        "success": True,
+        "message": f"Dry run: Fork module '{source_module['id']}' to create new module",
+        "instructions": (
+            "Inform User: Review the fork configuration below. "
+            "Ask User: Confirm the fork parameters or request changes before proceeding with actual fork operation."
+        ),
+        "data": {
+            "type": "dry_run",
+            "source_module": source_module,
+            "target_module": {
+                "intent": target_info["intent"],
+                "flavor": target_info["flavor"],
+                "version": target_info["version"]
+            },
+            "target_directory": target_info["directory"],
+            "full_target_path": str(target_info["full_path"]),
+            "target_exists": target_exists,
+            "target_exists_warning": "⚠️ Target directory already exists and will be overwritten" if target_exists else None
+        }
+    }
+
+
+def _download_and_extract_module(module_id: str, target_directory: str) -> tuple[bool, str]:
+    """
+    Download and extract module to target directory.
+    
+    Args:
+        module_id (str): ID of module to download
+        target_directory (str): Target directory for extraction
+        
+    Returns:
+        tuple[bool, str]: (success, error_message_if_failed)
+    """
+    success, message = download_and_extract_module_zip(module_id, target_directory)
+    return success, message if not success else ""
+
+
+def _update_module_metadata(facets_path: str, new_flavor: str, new_version: str) -> tuple[bool, dict, str]:
+    """
+    Update module metadata in facets.yaml file.
+    
+    Args:
+        facets_path (str): Path to facets.yaml file
+        new_flavor (str): New flavor value
+        new_version (str): New version value
+        
+    Returns:
+        tuple[bool, dict, str]: (success, original_metadata, error_message)
+    """
+    if not os.path.exists(facets_path):
+        return False, {}, f"facets.yaml not found at {facets_path}"
+
+    try:
+        # Load existing facets.yaml
+        with open(facets_path, 'r') as f:
+            facets_config = yaml.safe_load(f)
+        
+        # Store original metadata for reference
+        original_metadata = {
+            "intent": facets_config.get("intent", ""),
+            "flavor": facets_config.get("flavor", ""),
+            "version": facets_config.get("version", "")
+        }
+
+        # Update metadata (intent stays the same, update flavor and version)
+        facets_config["flavor"] = new_flavor
+        facets_config["version"] = new_version
+        
+        # Also update sample.flavor and sample.version if they exist
+        if "sample" in facets_config:
+            if "flavor" in facets_config["sample"]:
+                facets_config["sample"]["flavor"] = new_flavor
+            if "version" in facets_config["sample"]:
+                facets_config["sample"]["version"] = new_version
+
+        # Write updated facets.yaml
+        with open(facets_path, 'w') as f:
+            yaml.dump(facets_config, f, default_flow_style=False, sort_keys=False)
+            
+        return True, original_metadata, ""
+        
+    except Exception as e:
+        return False, {}, f"Error updating facets.yaml: {str(e)}"
+
+
+def _list_module_files(path: str) -> list:
+    """
+    List all files in the module directory.
+    
+    Args:
+        path (str): Path to module directory
+        
+    Returns:
+        list: List of relative file paths
+    """
+    try:
+        module_files = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                rel_path = os.path.relpath(os.path.join(root, file), path)
+                module_files.append(rel_path)
+        return module_files
+    except Exception:
+        return ["Could not list files"]
 
 
 @mcp.tool()
@@ -113,156 +277,56 @@ def fork_existing_module(
         str: JSON formatted response with fork operation details
     """
     try:
-        # First, get the source module details to extract the intent
-        api_client = ClientUtils.get_client()
-        modules_api = ModuleManagementApi(api_client)
-        
-        # Find the source module to get its intent
-        try:
-            modules = modules_api.get_all_modules()
-            source_module = None
-            for module in modules:
-                if module.id == source_module_id:
-                    source_module = module
-                    break
-            
-            if not source_module:
-                return json.dumps({
-                    "success": False,
-                    "message": f"Source module '{source_module_id}' not found.",
-                    "instructions": "Inform User: The specified module ID was not found in the control plane.",
-                    "error": f"Module with ID '{source_module_id}' not found"
-                }, indent=2)
-            
-            # Extract intent name
-            intent_name = ""
-            if source_module.intent_details and hasattr(source_module.intent_details, 'name'):
-                intent_name = source_module.intent_details.name
-            else:
-                return json.dumps({
-                    "success": False,
-                    "message": "Source module has no valid intent details.",
-                    "instructions": "Inform User: The source module does not have valid intent information.",
-                    "error": "Source module intent details are missing or invalid"
-                }, indent=2)
-            
-        except ApiException as e:
+        # Get source module details
+        success, source_module, error_msg = _get_source_module_details(source_module_id)
+        if not success:
             return json.dumps({
                 "success": False,
-                "message": "Failed to retrieve source module details.",
-                "instructions": "Inform User: Could not retrieve source module information from control plane.",
-                "error": f"API error: {str(e)}"
+                "message": f"Source module '{source_module_id}' not found or invalid.",
+                "instructions": "Inform User: The specified module could not be retrieved from the control plane.",
+                "error": error_msg
             }, indent=2)
         
-        # Determine target directory: intent/new_flavor/new_version
-        target_directory = f"{intent_name}/{new_flavor}/{new_version}"
+        # Prepare target information
+        target_directory = f"{source_module['intent']}/{new_flavor}/{new_version}"
         full_target_path = ensure_path_in_working_directory(target_directory, working_directory)
         
+        target_info = {
+            "intent": source_module["intent"],
+            "flavor": new_flavor,
+            "version": new_version,
+            "directory": target_directory,
+            "full_path": full_target_path
+        }
+        
         if dry_run:
-            # Check if target directory already exists
-            target_exists = os.path.exists(full_target_path)
-            
-            return json.dumps({
-                "success": True,
-                "message": f"Dry run: Fork module '{source_module_id}' to create new module",
-                "instructions": (
-                    "Inform User: Review the fork configuration below. "
-                    "Ask User: Confirm the fork parameters or request changes before proceeding with actual fork operation."
-                ),
-                "data": {
-                    "type": "dry_run",
-                    "source_module": {
-                        "id": source_module_id,
-                        "intent": intent_name,
-                        "flavor": source_module.flavor,
-                        "version": source_module.version
-                    },
-                    "target_module": {
-                        "intent": intent_name,
-                        "flavor": new_flavor,
-                        "version": new_version
-                    },
-                    "target_directory": target_directory,
-                    "full_target_path": str(full_target_path),
-                    "target_exists": target_exists,
-                    "target_exists_warning": "⚠️ Target directory already exists and will be overwritten" if target_exists else None
-                }
-            }, indent=2)
+            dry_run_result = _perform_dry_run(source_module, target_info)
+            return json.dumps(dry_run_result, indent=2)
 
         # Actual fork operation
         # Step 1: Download and extract the source module
-        extract_result = download_and_extract_module_zip(source_module_id, target_directory)
-        
-        if "Error" in extract_result or "Failed" in extract_result:
+        success, error_msg = _download_and_extract_module(source_module_id, target_directory)
+        if not success:
             return json.dumps({
                 "success": False,
                 "message": "Failed to download source module",
                 "instructions": "Inform User: Failed to download the source module for forking.",
-                "error": extract_result
+                "error": error_msg
             }, indent=2)
 
-        # Step 2: Read and modify facets.yaml
+        # Step 2: Update module metadata
         facets_yaml_path = os.path.join(full_target_path, "facets.yaml")
-        
-        if not os.path.exists(facets_yaml_path):
+        success, original_metadata, error_msg = _update_module_metadata(facets_yaml_path, new_flavor, new_version)
+        if not success:
             return json.dumps({
                 "success": False,
-                "message": "No facets.yaml found in downloaded module",
-                "instructions": "Inform User: Downloaded module does not contain facets.yaml file.",
-                "error": f"facets.yaml not found at {facets_yaml_path}"
+                "message": "Failed to update module metadata",
+                "instructions": "Inform User: Could not update the module configuration.",
+                "error": error_msg
             }, indent=2)
 
-        # Load existing facets.yaml
-        try:
-            with open(facets_yaml_path, 'r') as f:
-                facets_config = yaml.safe_load(f)
-        except Exception as e:
-            return json.dumps({
-                "success": False,
-                "message": "Failed to parse facets.yaml",
-                "instructions": "Inform User: Could not parse the downloaded module's facets.yaml file.",
-                "error": f"Error parsing facets.yaml: {str(e)}"
-            }, indent=2)
-
-        # Store original metadata for reference
-        original_metadata = {
-            "intent": facets_config.get("intent", ""),
-            "flavor": facets_config.get("flavor", ""),
-            "version": facets_config.get("version", "")
-        }
-
-        # Step 3: Update metadata (intent stays the same, update flavor and version)
-        facets_config["flavor"] = new_flavor
-        facets_config["version"] = new_version
-        
-        # Also update sample.flavor and sample.version if they exist
-        if "sample" in facets_config:
-            if "flavor" in facets_config["sample"]:
-                facets_config["sample"]["flavor"] = new_flavor
-            if "version" in facets_config["sample"]:
-                facets_config["sample"]["version"] = new_version
-
-        # Step 4: Write updated facets.yaml
-        try:
-            with open(facets_yaml_path, 'w') as f:
-                yaml.dump(facets_config, f, default_flow_style=False, sort_keys=False)
-        except Exception as e:
-            return json.dumps({
-                "success": False,
-                "message": "Failed to write updated facets.yaml",
-                "instructions": "Inform User: Could not save the updated module configuration.",
-                "error": f"Error writing facets.yaml: {str(e)}"
-            }, indent=2)
-
-        # Step 5: List the forked module files
-        try:
-            module_files = []
-            for root, dirs, files in os.walk(full_target_path):
-                for file in files:
-                    rel_path = os.path.relpath(os.path.join(root, file), full_target_path)
-                    module_files.append(rel_path)
-        except Exception:
-            module_files = ["Could not list files"]
+        # Step 3: List module files
+        module_files = _list_module_files(full_target_path)
 
         return json.dumps({
             "success": True,
@@ -278,7 +342,7 @@ def fork_existing_module(
                 "full_path": str(full_target_path),
                 "original_metadata": original_metadata,
                 "new_metadata": {
-                    "intent": intent_name,
+                    "intent": source_module["intent"],
                     "flavor": new_flavor,
                     "version": new_version
                 },
