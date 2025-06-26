@@ -71,4 +71,3 @@ def FIRST_STEP_get_instructions() -> str:
         "instructions": "Inform User: Instructions loaded successfully.",
         "data": instructions
     }, indent=2)
-
