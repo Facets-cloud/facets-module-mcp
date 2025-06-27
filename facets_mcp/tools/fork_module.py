@@ -26,7 +26,7 @@ def _get_source_module_details(module_id: str) -> tuple[bool, dict, str]:
         api_client = ClientUtils.get_client()
         modules_api = ModuleManagementApi(api_client)
         
-        modules = modules_api.get_all_modules()
+        modules = modules_api.get_all_modules(can_download=True)
         source_module = None
         for module in modules:
             if module.id == module_id:
@@ -193,7 +193,7 @@ def list_modules_for_fork() -> str:
         modules_api = ModuleManagementApi(api_client)
         
         # Get all modules
-        modules = modules_api.get_all_modules()
+        modules = modules_api.get_all_modules(can_download=True)
         
         if not modules:
             return json.dumps({
