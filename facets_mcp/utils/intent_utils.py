@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Tuple, List, Dict, Any
+from typing import Tuple
 from facets_mcp.utils.client_utils import ClientUtils
 from swagger_client.api.intent_management_api import IntentManagementApi
 from swagger_client.rest import ApiException
