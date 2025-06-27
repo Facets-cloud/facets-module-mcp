@@ -5,6 +5,7 @@ from facets_mcp.utils.client_utils import ClientUtils
 from swagger_client.api.intent_management_api import IntentManagementApi
 from swagger_client.rest import ApiException
 
+
 def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
     """
     Checks if the intent in facets.yaml exists in the control plane. If not, checks for presence of intentDetails.
