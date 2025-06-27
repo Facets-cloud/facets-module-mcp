@@ -307,7 +307,6 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
             return json.dumps({
                 "success": False,
                 "instructions": intent_message,
-                "error": intent_message
             }, indent=2)
 
         # Return combined results
