@@ -8,7 +8,6 @@ from swagger_client.rest import ApiException
 
 from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.client_utils import ClientUtils
-from facets_mcp.utils.file_utils import ensure_path_in_working_directory
 from facets_mcp.utils.module_download_utils import download_and_extract_module_zip
 
 
@@ -169,7 +168,7 @@ def _list_module_files(path: str) -> list:
     """
     try:
         module_files = []
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for file in files:
                 rel_path = os.path.relpath(os.path.join(root, file), path)
                 module_files.append(rel_path)
