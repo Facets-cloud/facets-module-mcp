@@ -13,6 +13,9 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 * **Facets Module Generation**  
   Interactive prompt-driven workflows facilitate generation of Terraform modules with metadata, variable, and input management using FTF CLI.
 
+* **Module Forking**  
+  Fork existing modules from the Facets control plane to create customized variants. Supports discovering available modules, updating metadata, and customizing functionality while preserving the original module structure.
+
 * **Supplementary Instructions Support**  
   Automatically reads additional project-specific instructions from the `mcp_instructions` directory at the root level, allowing teams to define custom requirements, constraints, and guidelines that supplement the default module generation behavior.
 
@@ -46,6 +49,8 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `test_already_previewed_module`          | Tests a module that has been previewed by deploying it to a specified test project.                                                      |
 | `check_deployment_status`                | Checks the status of a deployment with optional waiting for completion.                                                                  |
 | `get_deployment_logs`                    | Retrieves logs for a specific deployment.                                                                                               |
+| `list_modules_for_fork`                  | Lists all available modules from the control plane that can be forked, displaying them in a compact format for easy selection.          |
+| `fork_existing_module`                   | Forks an existing module by downloading it and updating its metadata (flavor and version). Supports dry-run preview and user confirmation. |
 
 ## Prerequisites
 
@@ -134,9 +139,23 @@ Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/c
 
 - Complete deployment flow: preview modules with `push_preview_module_to_facets_cp`, test on dedicated test projects with `test_already_previewed_module`, and monitor progress using `check_deployment_status` and `get_deployment_logs`.
 
-- Employ MCP prompts like `generate_new_module` to guide module generation interactively.
+- Employ MCP prompts like `generate_new_module` to guide module generation interactively, or use `fork_existing_module` to customize existing modules.
 
 - All destructive actions require explicit user confirmation and dry-run previews.
+
+---
+
+## Module Forking Use Cases
+
+The MCP server now supports forking existing modules from the Facets control plane. Use the **"Fork Existing Module"** prompt to access a guided workflow for:
+
+- **Security enhancements**: Fork a basic module to add additional security controls or compliance requirements  
+- **Cloud provider adaptations**: Adapt modules for different cloud providers while maintaining core functionality
+- **Performance optimizations**: Create high-performance variants of existing modules with enhanced configurations
+- **Feature customizations**: Add organization-specific features or integrations to existing modules
+- **Version updates**: Modernize older modules with updated provider versions or new Terraform features
+
+The fork workflow maintains the original module structure while allowing you to customize metadata, variables, resources, and outputs to meet your specific requirements.
 
 ---
 
