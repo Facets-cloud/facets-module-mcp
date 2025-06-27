@@ -52,9 +52,9 @@ def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
     # Prepare YAML snippet
     yaml_snippet = (
         "intentDetails:\n"
-        "  type: <choose from below or specify a new value>\n"
+        "  type: to group the intent into <choose from below or specify a new value>\n"
         f"  description: <Description of the intent {intent}>\n"
-        "  displayName: <Human readable display name>\n"
+        f"  displayName: <Human readable display name of the intent {intent}>\n"
         "  # iconUrl: <svg file link> - only include if the user provides a specific icon URL, otherwise skip this field"
     )
 
