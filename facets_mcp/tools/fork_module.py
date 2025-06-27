@@ -288,8 +288,8 @@ def fork_existing_module(
             }, indent=2)
         
         # Prepare target information
-        target_directory = f"{source_module['intent']}/{new_flavor}/{new_version}"
-        full_target_path = ensure_path_in_working_directory(target_directory, working_directory)
+        target_directory = os.path.join(source_module['intent'], new_flavor, new_version)
+        full_target_path = os.path.join(working_directory, target_directory)
         
         target_info = {
             "intent": source_module["intent"],
@@ -305,7 +305,7 @@ def fork_existing_module(
 
         # Actual fork operation
         # Step 1: Download and extract the source module
-        success, error_msg = _download_and_extract_module(source_module_id, target_directory)
+        success, error_msg = _download_and_extract_module(source_module_id, full_target_path)
         if not success:
             return json.dumps({
                 "success": False,

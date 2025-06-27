@@ -8,6 +8,7 @@ from facets_mcp.tools.existing_modules import *
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.prompts.module_prompt import *
 from facets_mcp.tools.deploy_module import *
+from facets_mcp.tools.fork_module import *
 
 
 # Function to initialize the environment and perform necessary checks
