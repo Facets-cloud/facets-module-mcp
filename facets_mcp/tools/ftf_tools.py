@@ -8,6 +8,7 @@ from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_inf
 from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types, infer_properties_from_interfaces_and_attributes
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.yaml_utils import validate_module_output_types
+from facets_mcp.utils.intent_utils import check_intent_and_intent_details
 
 # Import Swagger client components
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
@@ -300,6 +301,14 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
                 "error": f"Failed to validate module directory using FTF CLI. {validation_message}"
             }, indent=2)
 
+        # INTENT VALIDATION (at the end)
+        intent_ok, intent_message = check_intent_and_intent_details(module_path)
+        if not intent_ok:
+            return json.dumps({
+                "success": False,
+                "instructions": intent_message,
+            }, indent=2)
+
         # Return combined results
         return json.dumps({
             "success": True,
@@ -329,6 +338,14 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
     - str: A JSON string with the output from the FTF command execution.
     """
     try:
+        # INTENT VALIDATION (before running FTF command)
+        intent_ok, intent_message = check_intent_and_intent_details(module_path)
+        if not intent_ok:
+            return json.dumps({
+                "success": False,
+                "instructions": intent_message,
+                "error": intent_message
+            }, indent=2)
         # Get git repository details
         git_info = get_git_repo_info(working_directory)
         git_repo_url = git_info["url"]
