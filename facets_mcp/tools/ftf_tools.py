@@ -364,6 +364,9 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
         command.extend(["-g", git_repo_url])
         command.extend(["-r", git_ref])
 
+        # do not update the output type - it should have already been created using register_output_type tool
+        command.extend(["--skip-output-write", "true"])
+
         message = run_ftf_command(command)
 
         return json.dumps({
