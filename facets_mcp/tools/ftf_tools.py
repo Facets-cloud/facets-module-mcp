@@ -245,7 +245,7 @@ def register_output_type(
 
 
 @mcp.tool()
-def validate_module(module_path: str, check_only: bool = False) -> str:
+def validate_module(module_path: str, check_only: bool = False, skip_terraform_validation_if_provider_not_found: bool = False) -> str:
     """
     Tool to validate a module directory using FTF CLI.
     
@@ -257,6 +257,7 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
     Args:
     - module_path (str): The path to the module.
     - check_only (bool): Flag to only check formatting without applying changes.
+    - skip_terraform_validation_if_provider_not_found (bool): Flag to skip terraform validation during the process - send as true only if you see "Provider configuration not present" while validating.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution or error message if validation fails.
@@ -281,13 +282,14 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
 
         # First, run the standard FTF validation
         # Create command
-        check_flag = "--check-only" if check_only else ""
         command = [
             "ftf", "validate-directory",
             module_path
         ]
-        if check_flag:
-            command.append(check_flag)
+        if check_only:
+            command.append("--check-only")
+        if skip_terraform_validation_if_provider_not_found:
+            command.extend(["--skip-terraform-validation", "true"])
             
         # Run command
         run_ftf_command(command)
@@ -324,7 +326,7 @@ def validate_module(module_path: str, check_only: bool = False) -> str:
 
 
 @mcp.tool()
-def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool = True, publishable: bool = False) -> str:
+def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool = True, publishable: bool = False, skip_terraform_validation_if_provider_not_found: bool = False) -> str:
     """
     Tool to preview a module using FTF CLI. This will push a Test version of module to control plane.
     Git repository details are automatically extracted from the local working directory's .git folder.
@@ -333,6 +335,7 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
     - module_path (str): The path to the module.
     - auto_create_intent (bool): Flag to auto-create intent if not exists.
     - publishable (bool): Flag to indicate if the module is publishable.
+    - skip_terraform_validation_if_provider_not_found (bool): Flag to skip terraform validation during the process - send as true only if you see "Provider configuration not present" while validating.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution.
@@ -359,6 +362,8 @@ def push_preview_module_to_facets_cp(module_path: str, auto_create_intent: bool 
             command.extend(["-a", str(auto_create_intent)])
         if publishable:
             command.extend(["-f", str(publishable)])
+        if skip_terraform_validation_if_provider_not_found:
+            command.extend(["--skip-terraform-validation", "true"])
 
         # Always include git details (now from local repository)
         command.extend(["-g", git_repo_url])
