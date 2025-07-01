@@ -283,7 +283,7 @@ def validate_module(module_path: str, check_only: bool = False, skip_terraform_v
         # First, run the standard FTF validation
         # Create command
         command = [
-            "ftf", "validate-directory`",
+            "ftf", "validate-directory",
             module_path
         ]
         if check_only:
