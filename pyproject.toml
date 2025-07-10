@@ -55,7 +55,3 @@ include = ["facets_mcp*"]
     "tools/module_instructions/*.md",
     "tools/module_instructions/*.tf",
 ]
-
-[tool.poetry.dev-dependencies]
-pytest = "^7.0.0"
-python-hcl2 = "^4.3.0"

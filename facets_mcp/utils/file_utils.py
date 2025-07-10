@@ -7,10 +7,6 @@ import os
 import sys
 import difflib
 from typing import Optional, Dict, Any, Tuple
-import re
-import glob
-import hcl2
-import io
 
 def ensure_path_in_working_directory(path: str, working_directory: str) -> str:
     """
@@ -245,49 +241,3 @@ def perform_text_replacement(content: str, old_string: str, new_string: str, exp
     
     success_msg = f"Successfully replaced {count} occurrence{'s' if count > 1 else ''}"
     return True, new_content, success_msg
-
-def contains_provider_block(tf_content: str) -> bool:
-    """
-    Detects if the given Terraform file content contains a provider block using HCL parsing.
-    Args:
-        tf_content (str): The content of a .tf file.
-    Returns:
-        bool: True if a provider block is found, False otherwise.
-    """
-    try:
-        with io.StringIO(tf_content) as fp:
-            parsed = hcl2.load(fp)
-        if 'provider' in parsed and parsed['provider']:
-            return True
-        return False
-    except Exception:
-        return False
-
-def find_provider_blocks_in_directory(module_path: str, working_directory: str) -> list:
-    """
-    Scans all .tf files in the given directory (recursively) for provider blocks.
-    Args:
-        module_path (str): The path to the module directory.
-        working_directory (str): The working directory for path safety.
-    Returns:
-        list: List of file paths (relative to module_path) that contain provider blocks.
-    Raises:
-        Exception: If any .tf file cannot be parsed as valid HCL.
-    """
-    offending_files = []
-    # Ensure path safety
-    full_module_path = ensure_path_in_working_directory(module_path, working_directory)
-    tf_files = glob.glob(os.path.join(full_module_path, "**", "*.tf"), recursive=True)
-    for tf_file in tf_files:
-        try:
-            with open(tf_file, "r", encoding="utf-8") as fp:
-                content = fp.read()
-                with io.StringIO(content) as sio:
-                    parsed = hcl2.load(sio)
-                if 'provider' in parsed and parsed['provider']:
-                    rel_path = os.path.relpath(tf_file, full_module_path)
-                    offending_files.append(rel_path)
-        except Exception as e:
-            # Fail fast on parse errors
-            raise Exception(f"❌ Failed to parse {tf_file}: {e}")
-    return offending_files
