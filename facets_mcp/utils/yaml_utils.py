@@ -277,3 +277,24 @@ def validate_module_output_types(module_path: str) -> Tuple[bool, str]:
             
     except Exception as e:
         return True, f"Warning: Output type validation encountered an error: {str(e)}\nThis may be due to API connectivity issues or invalid configuration."
+
+
+def validate_no_provider_blocks(module_path: str, working_directory: str) -> tuple:
+    """
+    Validates that no provider blocks exist in any .tf file in the module directory.
+    Args:
+        module_path (str): The path to the module directory.
+        working_directory (str): The working directory for path safety.
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    from facets_mcp.utils.file_utils import find_provider_blocks_in_directory
+    offending_files = find_provider_blocks_in_directory(module_path, working_directory)
+    if offending_files:
+        files_list = "\n  - ".join(offending_files)
+        msg = (
+            f"\u274C Provider blocks are not allowed in module files. Found provider block(s) in:\n  - {files_list}\n"
+            "Use exposed providers in facets.yaml instead."
+        )
+        return False, msg
+    return True, "No provider blocks found in any .tf file."

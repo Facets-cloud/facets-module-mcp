@@ -7,7 +7,7 @@ from facets_mcp.config import mcp, working_directory  # Import from config for s
 from facets_mcp.utils.ftf_command_utils import run_ftf_command, get_git_repo_info, create_temp_yaml_file
 from facets_mcp.utils.output_utils import prepare_output_type_registration, compare_output_types, infer_properties_from_interfaces_and_attributes
 from facets_mcp.utils.client_utils import ClientUtils
-from facets_mcp.utils.yaml_utils import validate_module_output_types
+from facets_mcp.utils.yaml_utils import validate_module_output_types, validate_no_provider_blocks
 from facets_mcp.utils.intent_utils import check_intent_and_intent_details
 
 # Import Swagger client components
@@ -290,10 +290,19 @@ def validate_module(module_path: str, check_only: bool = False, skip_terraform_v
             command.append("--check-only")
         if skip_terraform_validation_if_provider_not_found:
             command.extend(["--skip-terraform-validation", "true"])
-            
+        
         # Run command
         run_ftf_command(command)
-        
+
+        # Provider block validation (fail fast if found)
+        provider_ok, provider_message = validate_no_provider_blocks(module_path, working_directory)
+        if not provider_ok:
+            return json.dumps({
+                "success": False,
+                "instructions": provider_message,
+                "error": provider_message
+            }, indent=2)
+
         # Use the utility function for output type validation
         success, validation_message = validate_module_output_types(module_path)
         if not success:

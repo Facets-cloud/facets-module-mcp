@@ -176,6 +176,50 @@ This guide demonstrates the full conversation flow—requirements, design refine
 
 ---
 
+## Provider Block Validation
+
+Facets modules **must not** contain `provider` blocks in any Terraform (`.tf`) file. Provider configuration should be exposed via `facets.yaml` and not hardcoded in module files.
+
+When running validation (e.g., `ftf validate-directory` or via the MCP server), the tool will:
+
+- Scan all `.tf` files in the module directory
+- Detect any `provider` blocks using HCL parsing
+- Fail validation with a clear error message if any provider blocks are found
+
+**Example error message:**
+
+```
+❌ Provider blocks are not allowed in module files. Found provider block(s) in:
+  - main.tf
+Use exposed providers in facets.yaml instead.
+```
+
+**How to fix:**
+- Remove all `provider` blocks from your module's `.tf` files
+- Use the `providers` section in `facets.yaml` to expose required providers
+
+This ensures modules remain provider-agnostic and follow Facets best practices for provider management.
+
+## Standalone Provider Block Validator
+
+A standalone script (`provider_block_validator.py`) is provided to scan any directory recursively for Terraform provider blocks using HCL2 parsing. This script does not depend on the MCP or FTF CLI and can be used independently.
+
+**Dependencies:**
+- `python-hcl2`
+- `pytest` (for running tests)
+
+**Usage:**
+```bash
+python provider_block_validator.py <path-to-module>
+```
+
+**Testing:**
+```bash
+pytest test_provider_block_validator.py
+```
+
+If any provider blocks are found, the script will print their locations and exit with a nonzero status. If any file cannot be parsed, the script will fail fast with an error.
+
 ## License
 
 This project is licensed under the MIT License. You are free to use, modify, and distribute it under its terms.
