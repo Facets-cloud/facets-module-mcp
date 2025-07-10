@@ -38,3 +38,4 @@ Terraform logic in `main.tf` must only use:
 - Do **not** define `output` blocks. Use `locals.output_attributes` to expose values.
 - Reference only variables defined in `variables.tf`.
 - Always derive names from `instance_name` and `environment.unique_name` unless specified by user.
+- **Never** use `try()` blocks, **always** use `lookup()` with explicit default values.
