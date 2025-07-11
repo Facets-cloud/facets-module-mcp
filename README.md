@@ -176,6 +176,29 @@ This guide demonstrates the full conversation flow—requirements, design refine
 
 ---
 
+## Provider Block Validation
+
+Modules must not contain `provider` blocks in any Terraform (`.tf`) file. The validation process will fail if any provider blocks are found in the module directory or its subdirectories. This ensures modules remain provider-agnostic and rely on provider configuration from the root module or via exposed providers in `facets.yaml`.
+
+**Error Example:**
+
+```
+❌ Provider blocks are not allowed in module files. Found provider block(s) in: main.tf.
+Use exposed providers in facets.yaml instead.
+```
+
+To fix this, remove all `provider` blocks from your module's `.tf` files and use exposed providers in `facets.yaml`.
+
+## Running Tests
+
+To run the test suite, use:
+
+```
+pytest
+```
+
+Ensure all dependencies are installed (see `pyproject.toml`).
+
 ## License
 
 This project is licensed under the MIT License. You are free to use, modify, and distribute it under its terms.

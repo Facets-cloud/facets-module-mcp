@@ -7,6 +7,7 @@ import os
 import sys
 import difflib
 from typing import Optional, Dict, Any, Tuple
+import hcl2
 
 def ensure_path_in_working_directory(path: str, working_directory: str) -> str:
     """
@@ -241,3 +242,43 @@ def perform_text_replacement(content: str, old_string: str, new_string: str, exp
     
     success_msg = f"Successfully replaced {count} occurrence{'s' if count > 1 else ''}"
     return True, new_content, success_msg
+
+def validate_no_provider_blocks(module_path: str) -> tuple:
+    """
+    Validate that no Terraform files in the module directory contain provider blocks.
+    Recursively scans all *.tf files using python-hcl2 and fails fast on parse errors.
+
+    Args:
+        module_path (str): The path to the module directory.
+
+    Returns:
+        tuple: (success: bool, message: str)
+            - success: True if no provider blocks are found
+            - message: Error message if provider blocks are found or parse fails
+    """
+    import glob
+    import os
+
+    tf_files = glob.glob(os.path.join(module_path, "**", "*.tf"), recursive=True)
+    provider_violations = []
+
+    for tf_file in tf_files:
+        try:
+            with open(tf_file, "r") as fp:
+                terraform_tree = hcl2.load(fp)
+        except Exception as e:
+            return False, f"❌ Failed to parse {tf_file}: {e}"
+
+        # Check for provider blocks
+        if isinstance(terraform_tree, dict) and "provider" in terraform_tree:
+            provider_blocks = terraform_tree["provider"]
+            if provider_blocks:
+                provider_violations.append(os.path.relpath(tf_file, module_path))
+
+    if provider_violations:
+        files = ", ".join(provider_violations)
+        return False, (
+            f"❌ Provider blocks are not allowed in module files. Found provider block(s) in: {files}.\n"
+            "Use exposed providers in facets.yaml instead."
+        )
+    return True, "✓ No provider blocks found in any Terraform files."

@@ -17,6 +17,7 @@ dependencies = [
     "questionary",
     "ftf-cli==0.3.0",
     "facets-control-plane-sdk==1.0.2",
+    "python-hcl2",
 ]
 requires-python = ">=3.11"
 keywords = ["Facets", "MCP", "Terraform", "Python"]
@@ -54,4 +55,9 @@ include = ["facets_mcp*"]
     "prompts/*.yml",
     "tools/module_instructions/*.md",
     "tools/module_instructions/*.tf",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest"
 ]
