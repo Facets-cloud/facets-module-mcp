@@ -1,0 +1,55 @@
+intent: storage
+flavor: s3
+version: '1.0'
+clouds:
+- aws
+description: Provisions an AWS S3 bucket with secure defaults and configurable lifecycle
+  policies for banking industry compliance.
+spec:
+  title: Secure S3 Bucket
+  description: Provisions an AWS S3 bucket with secure defaults and configurable lifecycle
+    policies for banking industry compliance.
+  type: object
+  properties:
+    bucket_name_prefix:
+      type: string
+      title: Bucket Name Prefix
+      description: Prefix for the S3 bucket name. The final name will be {prefix}-{environment}-{instance_name}
+      default: bank
+    storage_type:
+      type: string
+      title: Storage Type
+      description: Predefined storage configuration based on data retention needs
+      enum:
+      - short_term
+      - long_term
+      - compliance
+      default: compliance
+    enable_versioning:
+      type: boolean
+      title: Enable Versioning
+      description: Enable bucket versioning for enhanced data protection
+      default: true
+  required:
+  - bucket_name_prefix
+  - storage_type
+  - enable_versioning
+inputs:
+  aws_provider:
+    type: '@outputs/custom-aws-provider'
+    providers:
+    - aws
+outputs:
+  default:
+    type: '@outputs/custom-s3-bucket'
+sample:
+  kind: storage
+  flavor: s3
+  version: '1.0'
+  spec:
+    bucket_name_prefix: bank
+    storage_type: compliance
+    enable_versioning: true
+iac:
+  validated_files:
+  - variables.tf
