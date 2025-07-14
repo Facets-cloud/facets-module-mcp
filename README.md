@@ -209,3 +209,30 @@ Ensure all dependencies are installed (see `pyproject.toml`).
 ## License
 
 This project is licensed under the MIT License. You are free to use, modify, and distribute it under its terms.
+
+## ⚠️ FTF CLI Environment Setup
+
+Because of a fundamental incompatibility between the dependencies required by `ftf-cli` and modern Python HCL tools, you must use **two separate Python environments**:
+
+### 1. Main Project Environment (for MCP server and validation logic)
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+Use this environment to run the MCP server and all validation logic.
+
+### 2. FTF CLI Environment (for running ftf commands)
+```sh
+python3 -m venv ~/.ftf-venv
+source ~/.ftf-venv/bin/activate
+pip install lark-parser==0.7.8 hcl ftf-cli
+```
+Use this environment to run `ftf` commands, e.g.:
+```sh
+ftf validate-directory /path/to/your/module
+```
+**Do not install or run `ftf-cli` in your main project environment.**
+
+### Why is this necessary?
+This is a limitation of the Python/Terraform ecosystem: `ftf-cli` and its dependencies require very old versions of some libraries that are incompatible with modern HCL parsing tools. There is no way to have both working in a single environment with just `pyproject.toml`.
