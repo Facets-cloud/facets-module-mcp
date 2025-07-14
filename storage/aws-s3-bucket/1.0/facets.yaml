@@ -1,0 +1,164 @@
+intent: storage
+flavor: aws-s3-bucket
+version: "1.0"
+clouds: [aws]
+description: Creates and configures an AWS S3 bucket with customizable settings for versioning, encryption, and access control
+
+iac:
+  type: terraform
+  version: 1.5.7
+
+spec:
+  title: AWS S3 Bucket Configuration
+  description: Configuration options for creating and managing an AWS S3 bucket
+  type: object
+  properties:
+    bucket_name:
+      type: string
+      title: Bucket Name
+      description: The name of the S3 bucket (if not provided, will be auto-generated)
+      pattern: "^[a-z0-9][a-z0-9\\-]*[a-z0-9]$"
+      minLength: 3
+      maxLength: 63
+    versioning:
+      type: object
+      title: Versioning Configuration
+      description: Configure S3 bucket versioning settings
+      properties:
+        enabled:
+          type: boolean
+          title: Enable Versioning
+          description: Enable object versioning for the bucket
+          default: false
+        mfa_delete:
+          type: boolean
+          title: Enable MFA Delete
+          description: Require MFA for permanent object deletion
+          default: false
+      required:
+        - enabled
+    encryption:
+      type: object
+      title: Server-Side Encryption
+      description: Configure bucket encryption settings
+      properties:
+        enabled:
+          type: boolean
+          title: Enable Encryption
+          description: Enable server-side encryption for the bucket
+          default: true
+        kms_key_id:
+          type: string
+          title: KMS Key ID
+          description: The KMS key ID to use for encryption (leave empty for AWS managed key)
+      required:
+        - enabled
+    public_access_block:
+      type: object
+      title: Public Access Block Settings
+      description: Configure public access restrictions for security
+      properties:
+        block_public_acls:
+          type: boolean
+          title: Block Public ACLs
+          description: Block public ACLs on this bucket and objects
+          default: true
+        block_public_policy:
+          type: boolean
+          title: Block Public Policy
+          description: Block public bucket policies
+          default: true
+        ignore_public_acls:
+          type: boolean
+          title: Ignore Public ACLs
+          description: Ignore public ACLs on this bucket and objects
+          default: true
+        restrict_public_buckets:
+          type: boolean
+          title: Restrict Public Buckets
+          description: Restrict public bucket policies
+          default: true
+      required:
+        - block_public_acls
+        - block_public_policy
+        - ignore_public_acls
+        - restrict_public_buckets
+    lifecycle_configuration:
+      type: object
+      title: Lifecycle Configuration
+      description: Configure object lifecycle policies
+      x-ui-toggle: true
+      properties:
+        enabled:
+          type: boolean
+          title: Enable Lifecycle Rules
+          description: Enable lifecycle management for objects
+          default: false
+        transition_to_ia_days:
+          type: number
+          title: Transition to IA (Days)
+          description: Number of days after which objects transition to Infrequent Access
+          minimum: 30
+          default: 30
+        transition_to_glacier_days:
+          type: number
+          title: Transition to Glacier (Days)
+          description: Number of days after which objects transition to Glacier
+          minimum: 90
+          default: 90
+        expiration_days:
+          type: number
+          title: Expiration (Days)
+          description: Number of days after which objects are deleted (0 = no expiration)
+          minimum: 0
+          default: 0
+      required:
+        - enabled
+    tags:
+      type: object
+      title: Additional Tags
+      description: Additional tags to apply to the S3 bucket
+      x-ui-yaml-editor: true
+      default: {}
+  required:
+    - versioning
+    - encryption
+    - public_access_block
+    - lifecycle_configuration
+
+inputs:
+  aws_provider:
+    type: "@outputs/aws_provider"
+    optional: false
+    displayName: "AWS Provider"
+    description: "AWS provider configuration for managing S3 resources"
+    providers:
+      - aws
+
+outputs:
+  default:
+    type: "@outputs/s3-bucket"
+    title: "S3 Bucket Details"
+
+sample:
+  kind: storage
+  flavor: aws-s3-bucket
+  version: "1.0"
+  disabled: false
+  spec:
+    versioning:
+      enabled: false
+      mfa_delete: false
+    encryption:
+      enabled: true
+    public_access_block:
+      block_public_acls: true
+      block_public_policy: true
+      ignore_public_acls: true
+      restrict_public_buckets: true
+    lifecycle_configuration:
+      enabled: false
+      transition_to_ia_days: 30
+      transition_to_glacier_days: 90
+      expiration_days: 0
+    tags: {}

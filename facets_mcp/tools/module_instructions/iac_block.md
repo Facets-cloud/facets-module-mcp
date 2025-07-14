@@ -1,11 +1,15 @@
-## 🏗️ Always Add the `iac` Block in facets.yaml
+## 🏗️ Always Add and Update the `iac.validated_files` Block in facets.yaml
 
 When generating a new module, always include an `iac` block in the `facets.yaml` file.  
-This block should specify the infrastructure-as-code (IAC) implementation details for the module.
+The `iac` block must contain a `validated_files` array listing the names of all `.tf` files created for the module.
 
 Example:
 ```yaml
 iac:
-  type: terraform
-  version: 1.5.7
-``` 
+  validated_files:
+    - main.tf
+    - variables.tf
+    - outputs.tf
+```
+
+Whenever you create a new `.tf` file (such as `main.tf`, `variables.tf`, or any additional Terraform file), add its filename to the `iac.validated_files` array in `facets.yaml`. 
