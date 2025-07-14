@@ -24,3 +24,5 @@ facets_mcp/_version.py
 
 # Local Claude settings
 .claude/settings.local.json
+
+storage/storage/
