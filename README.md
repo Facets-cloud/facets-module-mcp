@@ -131,6 +131,13 @@ For token generation and authentication setup, please refer to the official Face
 Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/context/model-context-protocol)
 ---
 
+## Dependency and CLI Integration Notes
+
+- All FTF CLI operations are now run via subprocess (not Python imports) to avoid Python dependency conflicts. This means you can use modern dependencies in your code, and the CLI tools are called as external commands.
+- Only `python-hcl2` is used for HCL parsing in the codebase. Do **not** import or use the legacy `hcl` package.
+- If you need to use `ftf-cli` or `checkov`, install and run them as CLI tools (globally or in a separate venv), not as Python modules.
+- Environment setup is managed via `pyproject.toml` and the CLI config. If you see dependency issues, ensure you are not mixing Python imports of CLI tools with your own code.
+
 ## Usage Highlights
 
 - Use core tools (`list_files`, `read_file`, `edit_file_block`, `write_config_files`, etc.) for Terraform code management.
