@@ -13,3 +13,5 @@ iac:
 ```
 
 Whenever you create a new `.tf` file (such as `main.tf`, `variables.tf`, or any additional Terraform file), add its filename to the `iac.validated_files` array in `facets.yaml`. 
+
+> **Note:** No need to add `validated_files` block for files of existing modules that you are editing. This is only required for new modules or new `.tf` files you create. 
