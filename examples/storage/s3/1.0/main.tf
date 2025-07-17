@@ -111,7 +111,7 @@ locals {
   selected_lifecycle_rules = local.lifecycle_rules[var.instance.spec.storage_type]
 
   # Tags based on environment and storage type
-  tags = merge(var.environment.cloud_tags, {
+  tags = merge(var.environment.cloud_tags, var.additional_tags, {
     Name        = local.bucket_name
     StorageType = var.instance.spec.storage_type
     CreatedBy   = "Facets"

@@ -25,3 +25,9 @@ facets_mcp/_version.py
 # Local Claude settings
 .claude/settings.local.json
 
+examples/storage/s3/1.0/notes.txt
+aws-cloudfront-distribution/
+aws-s3-bucket-satyendra/
+compute/
+s3-app-integration/
+storage/

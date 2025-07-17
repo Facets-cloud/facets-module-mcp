@@ -30,6 +30,11 @@ spec:
       title: Enable Versioning
       description: Enable bucket versioning for enhanced data protection
       default: true
+    additional_tags:
+      type: object
+      title: Additional Tags
+      description: Additional tags to apply to the S3 bucket(s)
+      default: {}
   required:
   - bucket_name_prefix
   - storage_type

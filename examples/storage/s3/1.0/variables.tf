@@ -32,3 +32,9 @@ variable "inputs" {
     aws_provider = any
   })
 }
+
+variable "additional_tags" {
+  description = "Additional tags to apply to the S3 bucket(s)."
+  type        = map(string)
+  default     = {}
+}

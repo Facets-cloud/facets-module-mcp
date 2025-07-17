@@ -22,11 +22,15 @@ spec:
   bucket_name_prefix: "bank"       # Prefix for bucket name
   storage_type: "compliance"       # Options: short_term, long_term, compliance
   enable_versioning: true          # Toggle bucket versioning
+  additional_tags:
+    project: "banking-app"
+    owner: "devops-team"
 ```
 
 ## Required Inputs
 
 - `aws_provider`: An AWS provider from another module (typically a cloud_account module)
+- `additional_tags` (optional): Map of extra tags to apply to the S3 bucket(s)
 
 ## Storage Types
 

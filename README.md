@@ -51,6 +51,7 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `get_deployment_logs`                    | Retrieves logs for a specific deployment.                                                                                               |
 | `list_modules_for_fork`                  | Lists all available modules from the control plane that can be forked, displaying them in a compact format for easy selection.          |
 | `fork_existing_module`                   | Forks an existing module by downloading it and updating its metadata (flavor and version). Supports dry-run preview and user confirmation. |
+| `write_generic_file` | Writes files generically with working directory and file type checks. Path: `facets_mcp/tools/module_files.py` |
 
 ## Prerequisites
 

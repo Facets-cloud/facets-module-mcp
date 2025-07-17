@@ -4,7 +4,6 @@ import json
 import os
 import sys
 from pathlib import Path
-
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 
 from facets_mcp.config import mcp, working_directory
@@ -655,6 +654,8 @@ def write_generic_file(module_path: str, file_name: str, content: str) -> str:
     Writes a generic file to the module directory, except for .tf files, facets.yaml, or README.md.
     Fails if trying to write a forbidden file. Checks working directory as in other tools.
 
+    Can be used to add supporting files like python or bash scripts if needed by the module.
+
     Args:
         module_path (str): Path to the module directory.
         file_name (str): Name of the file to write.
@@ -699,7 +700,6 @@ def write_generic_file(module_path: str, file_name: str, content: str) -> str:
         }, indent=2)
     except Exception as e:
         error_message = f"Error writing file: {str(e)}"
-        print(error_message, file=sys.stderr)
         return json.dumps({
             "success": False,
             "message": "Unexpected error occurred while writing the file.",
