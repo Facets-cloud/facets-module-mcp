@@ -654,7 +654,7 @@ def write_generic_file(module_path: str, file_name: str, content: str) -> str:
     Writes a generic file to the module directory, except for .tf files, facets.yaml, or README.md.
     Fails if trying to write a forbidden file. Checks working directory as in other tools.
 
-    Can be used to add supporting files like python or bash scripts if needed by the module.
+    Can be used to add supporting files like Python or Bash scripts if needed by the module.
 
     Args:
         module_path (str): Path to the module directory.
