@@ -648,3 +648,62 @@ def edit_file_block(file_path: str, old_string: str, new_string: str, expected_r
             "success": False,
             "error": error_message
         }, indent=2)
+
+
+@mcp.tool()
+def write_generic_file(module_path: str, file_name: str, content: str) -> str:
+    """
+    Writes a generic file to the module directory, except for .tf files, facets.yaml, or README.md.
+    Fails if trying to write a forbidden file. Checks working directory as in other tools.
+    Can be used to add supporting files like Python or Bash scripts if needed by the module.
+
+    Args:
+        module_path (str): Path to the module directory.
+        file_name (str): Name of the file to write.
+        content (str): Content to write to the file.
+
+    Returns:
+        str: JSON string with success status, message, instructions, and optional error/data.
+    """
+    forbidden = ["facets.yaml", "README.md"]
+    if file_name.lower().endswith(".tf") or file_name in forbidden:
+        return json.dumps({
+            "success": False,
+            "message": f"Writing '{file_name}' is not allowed with this tool.",
+            "instructions": "Use the dedicated tool for .tf, facets.yaml, or README.md files.",
+            "error": f"Forbidden file type: {file_name}"
+        }, indent=2)
+    try:
+        full_module_path = Path(module_path).resolve()
+        working_dir = Path(working_directory).resolve()
+        # Check if the module path is within working directory
+        try:
+            full_module_path.relative_to(working_dir)
+        except ValueError:
+            return json.dumps({
+                "success": False,
+                "message": "Module path is outside the working directory.",
+                "instructions": "Inform User: Please provide a valid module path within the working directory.",
+                "error": f"Attempt to write files outside of the working directory. Module path: {full_module_path}, Working directory: {working_dir}",
+            }, indent=2)
+        # Ensure module directory exists
+        full_module_path.mkdir(parents=True, exist_ok=True)
+        file_path = full_module_path / file_name
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return json.dumps({
+            "success": True,
+            "message": f"Successfully wrote {file_name} to {file_path}",
+            "data": {
+                "file_path": str(file_path),
+                "file_name": file_name
+            }
+        }, indent=2)
+    except Exception as e:
+        error_message = f"Error writing file: {str(e)}"
+        return json.dumps({
+            "success": False,
+            "message": "Unexpected error occurred while writing the file.",
+            "instructions": "Inform User: Error writing file.",
+            "error": error_message
+        }, indent=2)
