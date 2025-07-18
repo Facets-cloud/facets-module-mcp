@@ -132,6 +132,13 @@ For token generation and authentication setup, please refer to the official Face
 Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/context/model-context-protocol)
 ---
 
+## Dependency and CLI Integration Notes
+
+- All FTF CLI operations are now run via subprocess (not Python imports) to avoid Python dependency conflicts. This means you can use modern dependencies in your code, and the CLI tools are called as external commands.
+- Only `python-hcl2` is used for HCL parsing in the codebase. Do **not** import or use the legacy `hcl` package.
+- If you need to use `ftf-cli` or `checkov`, install and run them as CLI tools (globally or in a separate venv), not as Python modules.
+- Environment setup is managed via `pyproject.toml` and the CLI config. If you see dependency issues, ensure you are not mixing Python imports of CLI tools with your own code.
+
 ## Usage Highlights
 
 - Use core tools (`list_files`, `read_file`, `edit_file_block`, `write_config_files`, etc.) for Terraform code management.
@@ -177,6 +184,56 @@ This guide demonstrates the full conversation flow—requirements, design refine
 
 ---
 
+## Provider Block Validation
+
+Modules must not contain `provider` blocks in any Terraform (`.tf`) file. The validation process will fail if any provider blocks are found in the module directory or its subdirectories. This ensures modules remain provider-agnostic and rely on provider configuration from the root module or via exposed providers in `facets.yaml`.
+
+**Error Example:**
+
+```
+❌ Provider blocks are not allowed in module files. Found provider block(s) in: main.tf.
+Use exposed providers in facets.yaml instead.
+```
+
+To fix this, remove all `provider` blocks from your module's `.tf` files and use exposed providers in `facets.yaml`.
+
+## Running Tests
+
+To run the test suite, use:
+
+```
+pytest
+```
+
+Ensure all dependencies are installed (see `pyproject.toml`).
+
 ## License
 
 This project is licensed under the MIT License. You are free to use, modify, and distribute it under its terms.
+
+## ⚠️ FTF CLI Environment Setup
+
+Because of a fundamental incompatibility between the dependencies required by `ftf-cli` and modern Python HCL tools, you must use **two separate Python environments**:
+
+### 1. Main Project Environment (for MCP server and validation logic)
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+Use this environment to run the MCP server and all validation logic.
+
+### 2. FTF CLI Environment (for running ftf commands)
+```sh
+python3 -m venv ~/.ftf-venv
+source ~/.ftf-venv/bin/activate
+pip install lark-parser==0.7.8 hcl ftf-cli
+```
+Use this environment to run `ftf` commands, e.g.:
+```sh
+ftf validate-directory /path/to/your/module
+```
+**Do not install or run `ftf-cli` in your main project environment.**
+
+### Why is this necessary?
+This is a limitation of the Python/Terraform ecosystem: `ftf-cli` and its dependencies require very old versions of some libraries that are incompatible with modern HCL parsing tools. There is no way to have both working in a single environment with just `pyproject.toml`.

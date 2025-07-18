@@ -9,6 +9,7 @@ from facets_mcp.utils.output_utils import prepare_output_type_registration, comp
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.yaml_utils import validate_module_output_types
 from facets_mcp.utils.intent_utils import check_intent_and_intent_details
+from facets_mcp.utils.file_utils import validate_no_provider_blocks
 
 # Import Swagger client components
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
@@ -278,6 +279,16 @@ def validate_module(module_path: str, check_only: bool = False, skip_terraform_v
                 "message": f"Module path '{module_path}' is not a directory.",
                 "instructions": "Inform User: Module path is not a directory.",
                 "error": f"Module path '{module_path}' is not a directory."
+            }, indent=2)
+
+        # Provider block validation (fail fast)
+        provider_ok, provider_message = validate_no_provider_blocks(module_path)
+        if not provider_ok:
+            return json.dumps({
+                "success": False,
+                "message": provider_message,
+                "instructions": "Remove provider blocks from all .tf files. Use exposed providers in facets.yaml instead.",
+                "error": provider_message
             }, indent=2)
 
         # First, run the standard FTF validation

@@ -9,33 +9,25 @@ import subprocess
 import tempfile
 import yaml
 from typing import List, Dict, Any
-from click.testing import CliRunner
-from ftf_cli.cli import cli
+# from ftf_cli.cli import cli
 
 
-def run_ftf_command(command: List[str]) -> str:
+def run_ftf_command(command: list) -> str:
     """
-    Runs an FTF command using the Click test runner.
-    
+    Runs an FTF command using subprocess to avoid dependency conflicts.
     Args:
         command (List[str]): The FTF command as a list of strings.
-        
     Returns:
         str: The output from the command execution.
     """
     if not command[0] == 'ftf':
         return "Error: Only 'ftf' commands are allowed."
 
-    runner = CliRunner()
-
-    # Remove starting 'ftf' from command to align with the Click command structure
-    result = runner.invoke(cli, command[1:])
-
-    if result.exit_code != 0:
-        raise Exception(f"{result.output}")
-
-    output_message = result.output
-    return output_message
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"FTF command failed: {e.stderr}")
 
 
 def get_git_repo_info(working_directory: str) -> Dict[str, str]:
