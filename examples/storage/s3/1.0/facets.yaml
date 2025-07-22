@@ -53,3 +53,7 @@ sample:
 iac:
   validated_files:
   - variables.tf
+imports:
+  - name: main_s3_bucket
+    resource_address: aws_s3_bucket.this
+    required: false
