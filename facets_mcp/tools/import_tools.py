@@ -14,14 +14,14 @@ from facets_mcp.utils.file_utils import ensure_path_in_working_directory
 @mcp.tool()
 def discover_terraform_resources(module_path: str) -> str:
     """
-    Scan Terraform files in module directory to identify all resources with their types and names.
-    Detects resources with count or for_each meta-arguments and returns structured list of available resources for import.
-    
+    Discover all Terraform resources in a module directory. Use this first to see what resources are available for import.
+    Returns list of resources with their addresses and whether they use count/for_each.
+
     Args:
         module_path (str): Path to the module directory containing Terraform files
-        
+
     Returns:
-        str: JSON response containing discovered resources or error information
+        str: JSON with resources list, showing resource_address, has_count, has_for_each for each resource
     """
     try:
         # Ensure the module path is within the working directory for security
@@ -94,31 +94,28 @@ def discover_terraform_resources(module_path: str) -> str:
 @mcp.tool()
 def add_import_declaration(
     module_path: str,
-    name: Optional[str] = None,
+    name: str,
     resource: Optional[str] = None,
     resource_address: Optional[str] = None,
     index: Optional[str] = None,
     key: Optional[str] = None,
-    required: bool = True,
-    interactive: bool = True
+    required: bool = True
 ) -> str:
     """
-    Add import declarations to facets.yaml file in the specified module.
-    Supports both interactive (with user prompts) and non-interactive modes.
-    Handles resource addressing for count/for_each resources and validates import configurations.
-    
+    Add import declaration to facets.yaml. Use after discovering resources with discover_terraform_resources.
+    For count resources, add index parameter. For for_each resources, add key parameter.
+
     Args:
         module_path (str): Path to the module directory
-        name (str, optional): The name of the import to be added
-        resource (str, optional): The Terraform resource address to import (e.g., 'aws_s3_bucket.bucket')
-        resource_address (str, optional): Full resource state address (e.g., 'aws_s3_bucket.bucket[0]')
-        index (str, optional): For resources with 'count', specify the index (e.g., '0', '1', or '*' for all)
-        key (str, optional): For resources with 'for_each', specify the key (e.g., 'my-key' or '*' for all)
-        required (bool): Flag to indicate if this import is required. Default is True
-        interactive (bool): Whether to run in interactive mode. Default is True
-        
+        name (str): Name for the import declaration
+        resource (str, optional): Resource address like 'aws_s3_bucket.bucket'
+        resource_address (str, optional): Full address like 'aws_s3_bucket.bucket[0]'
+        index (str, optional): Index for count resources ('0', '1', or '*')
+        key (str, optional): Key for for_each resources ('prod', 'dev', or '*')
+        required (bool): Whether import is required (default: True)
+
     Returns:
-        str: JSON response containing success/failure information
+        str: JSON response with success status and details
     """
     try:
         # Ensure the module path is within the working directory for security
@@ -134,10 +131,9 @@ def add_import_declaration(
         # Build the ftf add-import command
         command = ["ftf", "add-import"]
         
-        # Add options based on provided parameters
-        if name:
-            command.extend(["-n", name])
-        
+        # Add required parameters
+        command.extend(["-n", name])
+
         if required:
             command.append("-r")
         
@@ -155,9 +151,6 @@ def add_import_declaration(
         
         # Add the module path
         command.append(full_module_path)
-
-        # Note: interactive parameter is handled by the ftf CLI itself
-        # When no parameters are provided, it runs in interactive mode
 
         try:
             output = run_ftf_command(command)
@@ -179,7 +172,7 @@ def add_import_declaration(
                 "success": False,
                 "message": "Failed to add import declaration",
                 "error": str(e),
-                "instructions": "Check that the resource address is valid and the facets.yaml file is writable. For interactive mode, ensure all required parameters are provided or run without parameters to be prompted."
+                "instructions": "Check that the resource address is valid and the facets.yaml file is writable."
             }, indent=2)
             
     except Exception as e:
