@@ -9,6 +9,7 @@ from facets_mcp.utils.output_utils import prepare_output_type_registration, comp
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.yaml_utils import validate_module_output_types
 from facets_mcp.utils.intent_utils import check_intent_and_intent_details
+from facets_mcp.utils.validation_utils import validate_no_provider_blocks
 
 # Import Swagger client components
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
@@ -293,6 +294,15 @@ def validate_module(module_path: str, check_only: bool = False, skip_terraform_v
             
         # Run command
         run_ftf_command(command)
+        
+        # Validate no provider blocks in Terraform files
+        provider_validation_success, provider_validation_message = validate_no_provider_blocks(module_path)
+        if not provider_validation_success:
+            return json.dumps({
+                "success": False,
+                "instructions": "Failed provider block validation. Inform user about the issue and suggest using exposed providers in facets.yaml instead.",
+                "error": provider_validation_message
+            }, indent=2)
         
         # Use the utility function for output type validation
         success, validation_message = validate_module_output_types(module_path)
