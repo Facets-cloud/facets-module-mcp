@@ -34,9 +34,7 @@ def validate_no_provider_blocks(path):
                     relative_path = os.path.relpath(tf_file, path)
                     provider_violations.append(relative_path)
                     break  # Found one, no need to check further in this file
-        except Exception as e:
-            # If file can't be parsed, log warning but don't fail validation
-            relative_path = os.path.relpath(tf_file, path)
+        except Exception:
             continue
     
     if provider_violations:
