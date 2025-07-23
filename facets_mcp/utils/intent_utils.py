@@ -60,12 +60,22 @@ def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
     )
 
     message = (
-        f"The intent '{intent}' does not exist in the control plane, and no intentDetails block was found in facets.yaml.\n"
-        "To register a new intent, please add the following block to your facets.yaml (fields are optional):\n\n"
+        f"The intent '{intent}' does not exist in the control plane, and no intentDetails block was found in facets.yaml.\n\n"
+        "You have two options to resolve this:\n\n"
+        "OPTION 1 - Create the intent using MCP tools (Recommended):\n"
+        f"Use create_or_update_intent() to create the intent programmatically:\n"
+        f"- name: '{intent}'\n"
+        f"- intent_type: <choose from types below or specify new>\n"
+        f"- display_name: <human readable name>\n"
+        f"- description: <description of the intent>\n"
+        f"- icon_url: <optional SVG URL>\n\n"
+        "OPTION 2 - Add intentDetails block to facets.yaml:\n"
         f"{yaml_snippet}\n\n"
         "Available type options from existing intents:\n"
         f"{type_suggestions}\n"
         f"{type_note}\n\n"
-        "Note: iconUrl is optional - only include it if the user provides a specific SVG file URL. Never generate a random value."
+        "Use list_all_intents() to see all existing intents and their types.\n"
+        "Use get_intent('<name>') to check if a specific intent exists.\n\n"
+        "Note: iconUrl is optional - only include it if you have a specific SVG file URL."
     )
     return False, message 

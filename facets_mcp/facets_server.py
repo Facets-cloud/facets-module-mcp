@@ -8,6 +8,8 @@ from facets_mcp.tools.existing_modules import *
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.tools.deploy_module import *
 from facets_mcp.tools.fork_module import *
+from facets_mcp.tools.import_tools import *
+from facets_mcp.tools.intent_management_tools import *
 from facets_mcp.prompts.fork_module_prompt import *
 
 
