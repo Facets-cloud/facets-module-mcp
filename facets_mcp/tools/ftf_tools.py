@@ -103,8 +103,8 @@ def register_output_type(
     
     Args:
     - name (str): The name of the output type in the format '@namespace/name'.
-    - interfaces (Dict[str, Any], optional): A dictionary defining the output interfaces, similar to write_outputs.
-    - attributes (Dict[str, Any], optional): A dictionary defining the output attributes, similar to write_outputs.
+    - interfaces (Dict[str, Any], optional): A dictionary defining the output interfaces, similar to write_outputs, but as json schema.
+    - attributes (Dict[str, Any], optional): A dictionary defining the output attributes, similar to write_outputs, but as json schema.
     - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
     - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
     
