@@ -635,25 +635,50 @@ def edit_file_block(file_path: str, old_string: str, new_string: str, expected_r
     """
     Apply surgical edits to specific blocks of text in a file.
     <important>Make Sure you have Called FIRST_STEP_get_instructions first before this tool.</important>
-    
+
     Makes precise changes to files by finding and replacing exact text matches.
     This is safer than rewriting entire files.
-    
+
+    RESTRICTIONS:
+    - Cannot edit outputs.tf files - use write_outputs tool instead
+    - Cannot edit facets.yaml files - use write_config_files tool instead
+
     Best practices:
     - Include enough context in old_string to make it unique
     - Use expected_replacements=1 for safety (default)
     - For multiple replacements, specify the exact count expected
-    
+
     Args:
         file_path (str): Path to the file to edit (must be within working directory)
         old_string (str): Exact text to find and replace (include context for uniqueness)
         new_string (str): Replacement text
         expected_replacements (int): Expected number of matches (default: 1, prevents unintended changes)
-        
+
     Returns:
         str: JSON formatted response with success status, message, and optional error details
     """
     try:
+        # Check for forbidden files before any other processing
+        file_name = os.path.basename(file_path)
+
+        # Block editing of outputs.tf files
+        if file_name.lower() in ["outputs.tf", "output.tf"]:
+            return json.dumps({
+                "success": False,
+                "message": "Editing outputs.tf files is not allowed with this tool.",
+                "error": "Use write_outputs tool to update outputs.tf file",
+                "instructions": "Use write_outputs tool to update outputs.tf file"
+            }, indent=2)
+
+        # Block editing of facets.yaml files
+        if file_name.lower() == "facets.yaml":
+            return json.dumps({
+                "success": False,
+                "message": "Editing facets.yaml files is not allowed with this tool.",
+                "error": "Use write_config_files tool to update facets.yaml file",
+                "instructions": "Use write_config_files tool to update facets.yaml file"
+            }, indent=2)
+
         # Validate file path is within working directory
         full_file_path = ensure_path_in_working_directory(file_path, working_directory)
         
