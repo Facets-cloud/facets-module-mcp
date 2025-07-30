@@ -32,7 +32,7 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `FIRST_STEP_get_instructions`            | Loads all module writing instructions from the `module_instructions` directory and supplementary instructions from `mcp_instructions`. Always call this first. |
 | `list_files`                             | Lists all files in the specified module directory securely within the working directory.                                                 |
 | `read_file`                              | Reads the content of a file within the working directory.                                                                                |
-| `edit_file_block`                        | Apply surgical edits to specific blocks of text in files. Makes precise changes without rewriting entire files.                        |
+| `edit_file_block`                        | Apply surgical edits to specific blocks of text in files. Makes precise changes without rewriting entire files. Cannot edit `outputs.tf` or `facets.yaml` files. |
 | `write_config_files`                     | Writes and validates `facets.yaml` configuration files with dry-run and diff previews.                                                   |
 | `write_resource_file`                    | Writes Terraform resource files (`main.tf`, `variables.tf`, etc.) safely. Excludes `outputs.tf` and `facets.yaml`.                     |
 | `write_outputs`                          | Writes the `outputs.tf` file for a module with output attributes and interfaces in a local block.                                       |
