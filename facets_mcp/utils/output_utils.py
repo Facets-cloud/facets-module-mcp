@@ -175,64 +175,54 @@ def _infer_json_type(value: Any) -> str:
 
 
 def infer_properties_from_interfaces_and_attributes(
-    interfaces: Optional[Dict[str, Any]] = None,
-    attributes: Optional[Dict[str, Any]] = None,
+        interfaces: Optional[Dict[str, Any]] = None,
+        attributes: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Infer JSON schema properties from output interfaces and attributes.
-    
+
+    This function assumes the interfaces and attributes are already in JSON schema format.
+    It generates a clean structure suitable for both schema validation and lookup trees.
+
     Args:
-        interfaces (Dict[str, Any], optional): Dictionary of output interfaces
-        attributes (Dict[str, Any], optional): Dictionary of output attributes
-        
+        interfaces (Dict[str, Any], optional): Dictionary of output interfaces in JSON schema format
+        attributes (Dict[str, Any], optional): Dictionary of output attributes in JSON schema format
+
     Returns:
         Dict[str, Any]: JSON schema properties definition
     """
     try:
+        # Create base structure
         properties = {
             "type": "object",
             "properties": {}
         }
 
-        def _create_schema_for_items(items: Dict[str, Any], item_type_str: str) -> Dict[str, Any]:
-            processed_items = {}
-            for item_name, item_value in items.items():
-                if isinstance(item_value, dict):
-                    # Item is an object with nested properties
-                    nested_properties = {}
-                    for prop_name, prop_value in item_value.items():
-                        nested_properties[prop_name] = {
-                            "type": _infer_json_type(prop_value),
-                            "description": f"{item_type_str.capitalize()} property: {prop_name}"
-                        }
-                    
-                    processed_items[item_name] = {
-                        "type": "object",
-                        "properties": nested_properties,
-                        "description": f"Output {item_type_str}: {item_name}"
-                    }
-                else:
-                    # Item is a simple value
-                    processed_items[item_name] = {
-                        "type": _infer_json_type(item_value),
-                        "description": f"Output {item_type_str}: {item_name}"
-                    }
-            return processed_items
-
+        # Generate the full properties structure for schema validation
         if attributes:
+            attributes_properties = {}
+            for attr_name, attr_schema in attributes.items():
+                # Add the attribute as-is (assuming it's already a valid schema)
+                attributes_properties[attr_name] = attr_schema
+
             properties["properties"]["attributes"] = {
                 "type": "object",
-                "properties": _create_schema_for_items(attributes, "attribute")
+                "properties": attributes_properties
             }
-        
+
         if interfaces:
+            interfaces_properties = {}
+            for intf_name, intf_schema in interfaces.items():
+                # Add the interface as-is (assuming it's already a valid schema)
+                interfaces_properties[intf_name] = intf_schema
+
             properties["properties"]["interfaces"] = {
                 "type": "object",
-                "properties": _create_schema_for_items(interfaces, "interface")
+                "properties": interfaces_properties
             }
-        
+
         return properties
-    
+
     except Exception as e:
         error_message = f"Error inferring properties from interfaces and attributes: {str(e)}"
         print(error_message, file=sys.stderr)

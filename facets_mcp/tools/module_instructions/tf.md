@@ -35,7 +35,9 @@ Terraform logic in `main.tf` must only use:
 ### Rules & Restrictions
 
 - Do **not** define `provider` blocks. Providers must be injected through inputs.
+- Do **not** add versions for providers in the terraform code.
 - Do **not** define `output` blocks. Use `locals.output_attributes` to expose values.
 - Reference only variables defined in `variables.tf`.
 - Always derive names from `instance_name` and `environment.unique_name` unless specified by user.
-- **Never** use `try()` blocks, **always** use `lookup()` with explicit default values.
+- For optional values, **always** use `lookup()` with explicit default values, **never** use `try()` blocks.
+- Add `prevent_destroy = true` in the `lifecycle` block for all stateful resources (databases, storage, etc.).
