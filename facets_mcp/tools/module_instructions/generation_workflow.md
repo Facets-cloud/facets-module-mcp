@@ -242,7 +242,7 @@ Wait for explicit confirmation before executing the validation.
 - **Do not** define output blocks in Terraform code (use `locals.output_attributes`)
 - **Only** use variables defined in `variables.tf`
 - Always use `var.instance_name` and `var.environment.unique_name` for resource naming
-- **Never** use `try()` blocks, **always** use `lookup()` with explicit default values
+- For optional values, **always** use `lookup()` with explicit default values, **never** use `try()` blocks.
 - Add `prevent_destroy = true` in lifecycle blocks for stateful resources
 - **IMPORTANT**: Show user **all tool calls** that create or modify files before executing them
 - **CRITICAL**: The facets.yaml artifact must be approved before any file creation begins
