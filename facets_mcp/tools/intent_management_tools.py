@@ -93,8 +93,7 @@ def create_or_update_intent(
     intent_type: str,
     display_name: str,
     description: str,
-    icon_url: Optional[str] = None,
-    outputs: Optional[List[Dict[str, str]]] = None
+    icon_url: Optional[str] = None
 ) -> str:
     """
     Create a new intent or update an existing one in the control plane.
@@ -104,9 +103,8 @@ def create_or_update_intent(
         intent_type (str): The intent type/category (e.g., 'K8s', 'Storage')
         display_name (str): Human-readable display name
         description (str): Description of the intent
-        icon_url (str, optional): URL to SVG icon (optional)
-        outputs (List[Dict], optional): List of output definitions with 'name' and 'type' keys
-        
+        icon_url (str, optional): URL to SVG icon (optional). NEVER send this unless the user explicitly provides it.
+
     Returns:
         str: JSON response containing success/failure information
     """
@@ -115,25 +113,6 @@ def create_or_update_intent(
         api_client = ClientUtils.get_client()
         intent_api = IntentManagementApi(api_client)
 
-        # Prepare intent outputs
-        intent_outputs = []
-        if outputs:
-            for output in outputs:
-                intent_output = IntentOutput(
-                    name=output.get("name", "default"),
-                    type=output.get("type", f"@{name.replace('_', '-')}/cluster"),
-                    title=output.get("title", output.get("name", "default"))
-                )
-                intent_outputs.append(intent_output)
-        else:
-            # Default output structure
-            default_output = IntentOutput(
-                name="default",
-                type=f"@{name.replace('_', '-')}/cluster",
-                title="Default Output"
-            )
-            intent_outputs.append(default_output)
-
         # Create the intent request DTO
         intent_request = IntentRequestDTO(
             name=name,
@@ -141,7 +120,6 @@ def create_or_update_intent(
             display_name=display_name,
             description=description,
             icon_url=icon_url,
-            intent_outputs=intent_outputs,
             inferred_from_module=False
         )
 
@@ -215,10 +193,7 @@ def list_all_intents() -> str:
         for intent in all_intents:
             intent_info = {
                 "name": getattr(intent, 'name', ''),
-                "type": getattr(intent, 'type', ''),
-                "display_name": getattr(intent, 'display_name', ''),
-                "description": getattr(intent, 'description', ''),
-                "icon_url": getattr(intent, 'icon_url', '')
+                "type": getattr(intent, 'type', '')
             }
             intents_list.append(intent_info)
             
