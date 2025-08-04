@@ -105,6 +105,68 @@ Please review this list. You can:
 
 **CRITICAL STEP**: Before creating any files, draft the complete facets.yaml as an artifact for user review.
 
+#### 📋 Complete facets.yaml Template
+
+Use this template structure with all possible sections:
+
+```yaml
+# REQUIRED: Basic module metadata
+intent: {{ intent }}
+flavor: {{ flavor }}
+version: "1.0"
+clouds: [ {{ cloud }} ]
+description: {{ description }}
+
+# REQUIRED: Module interface definition
+spec:
+  title: {{ title }}
+  description: {{ description }}
+  type: object
+  properties:
+    # User-defined properties go here
+  required:
+    # List required fields
+
+# OPTIONAL: Dependencies on other modules
+inputs:
+  input_name:
+    type: "@outputs/some_type"
+    optional: false
+    displayName: "Display Name"
+    description: "Description"
+    providers:  # Only if consuming providers
+      - provider_name
+
+# REQUIRED: What this module exposes
+outputs:
+  default:
+    type: "@outputs/{{ outputname }}"
+    title: "Module Output Title"
+  # Additional specific outputs if needed
+
+# OPTIONAL: External artifacts (Docker images, etc.)
+artifact_inputs:
+  primary:
+    attribute_path: "spec.image.name"
+    artifact_type: "docker_image"
+
+# REQUIRED only if writing a new module: Terraform files validation
+iac:
+  validated_files:
+    - main.tf
+    - variables.tf
+
+# REQUIRED: Sample configuration
+sample:
+  kind: {{ intent }}
+  flavor: {{ flavor }}
+  version: "1.0"
+  disabled: true
+  spec:
+    # Only include defaults defined at field level
+    # Never fabricate sample values
+```
+
 Create an artifact containing the complete facets.yaml structure including:
 
 1. **Metadata section**:
@@ -238,12 +300,7 @@ Wait for explicit confirmation before executing the validation.
 
 ## 🛑 Rules & Guardrails
 
-- **Do not** define provider blocks in Terraform code
-- **Do not** define output blocks in Terraform code (use `locals.output_attributes`)
-- **Only** use variables defined in `variables.tf`
-- Always use `var.instance_name` and `var.environment.unique_name` for resource naming
-- For optional values, **always** use `lookup()` with explicit default values, **never** use `try()` blocks.
-- Add `prevent_destroy = true` in lifecycle blocks for stateful resources
+- Follow all Terraform conventions as defined in `tf.md`
 - **IMPORTANT**: Show user **all tool calls** that create or modify files before executing them
 - **CRITICAL**: The facets.yaml artifact must be approved before any file creation begins
 
