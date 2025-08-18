@@ -66,7 +66,6 @@ brew install uv
 
 For other methods, see the [official uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
-## Development
 
 ### Integration with Claude
 
