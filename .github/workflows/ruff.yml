@@ -1,0 +1,30 @@
+name: Ruff
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ruff-check:
+    name: Ruff Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Ruff Linter
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check"
+  
+  ruff-format:
+    name: Ruff Formatting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Ruff Formatter
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check"
