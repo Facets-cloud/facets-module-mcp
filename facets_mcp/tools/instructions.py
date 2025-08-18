@@ -1,10 +1,10 @@
-import os
 import json
-from facets_mcp.config import mcp, working_directory
-from facets_mcp.utils.file_utils import (
-    get_file_content
-)
+import os
 from pathlib import Path
+
+from facets_mcp.config import mcp, working_directory
+from facets_mcp.utils.file_utils import get_file_content
+
 
 @mcp.resource(uri="resource://facets_modules_knowledge", name="Facets Knowledge Base")
 def call_always_for_instruction() -> str:
@@ -23,6 +23,7 @@ def FIRST_STEP_get_instructions() -> str:
         str: A JSON string containing the content of all instruction files,
               with each file's content stored under its filename as key.
     """
+
     def read_markdown_files(directory_path: str) -> dict:
         """
         Reads all markdown files from a specified directory.
@@ -43,9 +44,11 @@ def FIRST_STEP_get_instructions() -> str:
                         try:
                             files_content[filename] = get_file_content(file_path)
                         except Exception as e:
-                            files_content[filename] = f"Error reading file {filename}: {str(e)}"
+                            files_content[filename] = (
+                                f"Error reading file {filename}: {e!s}"
+                            )
         except Exception as e:
-            files_content["_error"] = f"Error reading directory {directory_path}: {str(e)}"
+            files_content["_error"] = f"Error reading directory {directory_path}: {e!s}"
 
         return files_content
 
@@ -65,10 +68,12 @@ def FIRST_STEP_get_instructions() -> str:
     for filename, content in supplementary_instructions.items():
         instructions[f"supplementary_{filename}"] = content
 
-    return json.dumps({
-        "success": True,
-        "message": "Instructions loaded successfully.",
-        "instructions": "Inform User: Instructions loaded successfully.",
-        "data": instructions
-    }, indent=2)
-
+    return json.dumps(
+        {
+            "success": True,
+            "message": "Instructions loaded successfully.",
+            "instructions": "Inform User: Instructions loaded successfully.",
+            "data": instructions,
+        },
+        indent=2,
+    )

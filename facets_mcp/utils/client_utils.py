@@ -1,6 +1,7 @@
-import swagger_client
-import os
 import configparser
+import os
+
+import swagger_client
 
 
 class ClientUtils:
@@ -17,8 +18,14 @@ class ClientUtils:
 
     @staticmethod
     def get_client():
-        if ClientUtils.cp_url is None or ClientUtils.username is None or ClientUtils.token is None:
-            raise ValueError("Client configuration not set. Call set_client_config first.")
+        if (
+            ClientUtils.cp_url is None
+            or ClientUtils.username is None
+            or ClientUtils.token is None
+        ):
+            raise ValueError(
+                "Client configuration not set. Call set_client_config first."
+            )
 
         configuration = swagger_client.Configuration()
         configuration.username = ClientUtils.username
@@ -59,7 +66,9 @@ class ClientUtils:
             raise ValueError("Control plane URL, username, and token are required.")
 
         # Ensure cp_url has https:// prefix
-        if cp_url and not (cp_url.startswith("http://") or cp_url.startswith("https://")):
+        if cp_url and not (
+            cp_url.startswith("http://") or cp_url.startswith("https://")
+        ):
             cp_url = f"https://{cp_url}"
 
         # Remove trailing slash if present
