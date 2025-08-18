@@ -1,17 +1,19 @@
 import os
 import sys
 
+# Import all modules to register their tools and prompts with MCP
+import facets_mcp.prompts.fork_module_prompt  # noqa: F401
+import facets_mcp.tools.deploy_module  # noqa: F401
+import facets_mcp.tools.existing_modules  # noqa: F401
+import facets_mcp.tools.fork_module  # noqa: F401
+import facets_mcp.tools.ftf_tools  # noqa: F401
+import facets_mcp.tools.import_tools  # noqa: F401
+import facets_mcp.tools.instructions  # noqa: F401
+import facets_mcp.tools.intent_management_tools  # noqa: F401
+import facets_mcp.tools.module_files  # noqa: F401
 from facets_mcp.config import mcp  # Import from config for shared resources
-from facets_mcp.prompts.fork_module_prompt import *
-from facets_mcp.tools.deploy_module import *
-from facets_mcp.tools.existing_modules import *
-from facets_mcp.tools.fork_module import *
-from facets_mcp.tools.ftf_tools import *
-from facets_mcp.tools.import_tools import *
-from facets_mcp.tools.instructions import *
-from facets_mcp.tools.intent_management_tools import *
-from facets_mcp.tools.module_files import *
 from facets_mcp.utils.client_utils import ClientUtils
+from facets_mcp.utils.ftf_command_utils import run_ftf_command
 
 # Function to initialize the environment and perform necessary checks
 
