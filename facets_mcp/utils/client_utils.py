@@ -1,6 +1,7 @@
 import swagger_client
 import os
 import configparser
+import urllib3
 
 
 class ClientUtils:
@@ -24,7 +25,20 @@ class ClientUtils:
         configuration.username = ClientUtils.username
         configuration.password = ClientUtils.token
         configuration.host = ClientUtils.cp_url
-        return swagger_client.ApiClient(configuration)
+        
+        # Create API client
+        api_client = swagger_client.ApiClient(configuration)
+        
+        # Configure timeout for the underlying urllib3 pool manager
+        # Default timeouts: 30 seconds for connection, 300 seconds for read
+        connect_timeout = float(os.getenv("FACETS_CONNECT_TIMEOUT", "30"))
+        read_timeout = float(os.getenv("FACETS_READ_TIMEOUT", "300"))
+        
+        # Set timeout on the existing pool manager's connection pool kwargs
+        timeout = urllib3.util.Timeout(connect=connect_timeout, read=read_timeout)
+        api_client.rest_client.pool_manager.connection_pool_kw['timeout'] = timeout
+        
+        return api_client
 
     @staticmethod
     def initialize():
