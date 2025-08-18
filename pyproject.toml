@@ -56,3 +56,20 @@ include = ["facets_mcp*"]
     "tools/module_instructions/*.md",
     "tools/module_instructions/*.tf",
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+    "ruff>=0.12.9",
+]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+# Using Ruff's default rule selection (E4, E7, E9, F)
+# Only adding isort for import sorting
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__ files

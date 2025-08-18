@@ -66,6 +66,43 @@ brew install uv
 
 For other methods, see the [official uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
+## Development
+
+### Code Quality Tools
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for Python linting and formatting to maintain code quality and consistency.
+
+#### Running Ruff
+
+```bash
+# Check for linting issues
+ruff check facets_mcp/
+
+# Fix auto-fixable issues
+ruff check facets_mcp/ --fix
+
+# Format code
+ruff format facets_mcp/
+```
+
+#### Pre-commit Hooks
+
+The project is configured with pre-commit hooks to automatically run Ruff before commits:
+
+```bash
+# Install pre-commit hooks (one-time setup)
+pre-commit install
+
+# Run hooks manually on all files
+pre-commit run --all-files
+```
+
+The Ruff configuration is defined in `pyproject.toml` and includes:
+- Line length limit of 120 characters
+- Python 3.11+ compatibility
+- Comprehensive linting rules including pycodestyle, Pyflakes, isort, and more
+- Automatic import sorting and formatting
+
 ### Integration with Claude
 
 Add the following to your `claude_desktop_config.json`:

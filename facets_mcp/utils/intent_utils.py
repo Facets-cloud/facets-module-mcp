@@ -1,12 +1,13 @@
 import os
+
 import yaml
-from typing import Tuple
-from facets_mcp.utils.client_utils import ClientUtils
 from swagger_client.api.intent_management_api import IntentManagementApi
 from swagger_client.rest import ApiException
 
+from facets_mcp.utils.client_utils import ClientUtils
 
-def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
+
+def check_intent_and_intent_details(module_path: str) -> tuple[bool, str]:
     """
     Checks if the intent in facets.yaml exists in the control plane. If not, checks for presence of intentDetails.
     Returns (success, message). If not success, message contains user instructions and suggestions.
@@ -17,14 +18,17 @@ def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
 
     # Read facets.yaml
     try:
-        with open(facets_path, 'r') as f:
+        with open(facets_path) as f:
             facets_yaml = yaml.safe_load(f)
     except Exception as e:
-        return False, f"Error reading facets.yaml: {str(e)}"
+        return False, f"Error reading facets.yaml: {e!s}"
 
     intent = facets_yaml.get("intent")
     if not intent:
-        return False, "No 'intent' field found in facets.yaml. Please add an 'intent' field."
+        return (
+            False,
+            "No 'intent' field found in facets.yaml. Please add an 'intent' field.",
+        )
 
     # Fetch all existing intents from the API
     try:
@@ -32,22 +36,27 @@ def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
         intent_api = IntentManagementApi(api_client)
         all_intents = intent_api.get_all_intents()
     except ApiException as e:
-        return False, f"Error fetching intents from control plane: {str(e)}"
+        return False, f"Error fetching intents from control plane: {e!s}"
     except Exception as e:
-        return False, f"Error initializing API client: {str(e)}"
+        return False, f"Error initializing API client: {e!s}"
 
     # Check if intent exists
-    existing_intent_names = [i.name for i in all_intents if hasattr(i, 'name')]
+    existing_intent_names = [i.name for i in all_intents if hasattr(i, "name")]
     if intent in existing_intent_names:
         return True, "Intent already exists in control plane."
 
     # If not, check for intentDetails block
     if "intentDetails" in facets_yaml:
-        return True, "Intent does not exist in control plane, but intentDetails block is present."
+        return (
+            True,
+            "Intent does not exist in control plane, but intentDetails block is present.",
+        )
 
     # Gather all unique types for suggestion
-    unique_types = sorted(set(i.type for i in all_intents if hasattr(i, 'type') and i.type))
-    type_suggestions = '\n'.join(f"  - {t}" for t in unique_types)
+    unique_types = sorted(
+        set(i.type for i in all_intents if hasattr(i, "type") and i.type)
+    )
+    type_suggestions = "\n".join(f"  - {t}" for t in unique_types)
     type_note = "You may also specify a new value for type if none of these fit."
 
     # Prepare YAML snippet
@@ -78,4 +87,4 @@ def check_intent_and_intent_details(module_path: str) -> Tuple[bool, str]:
         "Use get_intent('<name>') to check if a specific intent exists.\n\n"
         "Note: iconUrl is optional - only include it if you have a specific SVG file URL."
     )
-    return False, message 
+    return False, message
