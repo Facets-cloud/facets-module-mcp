@@ -66,6 +66,71 @@ brew install uv
 
 For other methods, see the [official uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
+## Development
+
+### Integration with Claude
+
+Add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "facets-module": {
+      "command": "uvx",
+      "args": [
+        "facets-module-mcp@<VERSION>",
+        "/Path/to/working-directory"  # This should be the directory where your Terraform modules are checked out or a subdirectory containing the modules you want to work with
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "FACETS_PROFILE": "default",
+        "FACETS_USERNAME": "<YOUR_USERNAME>",
+        "FACETS_TOKEN": "<YOUR_TOKEN>",
+        "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
+      }
+    }
+  }
+}
+```
+
+For a locally cloned repository, use:
+
+```json
+{
+  "mcpServers": {
+    "facets-module": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/your/cloned/facets-module-mcp/facets_mcp",
+        "run",
+        "facets_server.py",
+        "/path/to/working-directory"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "FACETS_PROFILE": "default",
+        "FACETS_USERNAME": "<YOUR_USERNAME>",
+        "FACETS_TOKEN": "<YOUR_TOKEN>",
+        "CONTROL_PLANE_URL": "<YOUR_CONTROL_PLANE_URL>"
+      }
+    }
+  }
+}
+```
+
+⚠ Replace `<YOUR_USERNAME>`, `<YOUR_TOKEN>`, and `<YOUR_CONTROL_PLANE_URL>` with your actual authentication data.
+
+The `uv` runner automatically manages environment and dependency setup using the `pyproject.toml` file in the MCP directory.
+
+If you have already logged into FTF, specifying `FACETS_PROFILE` is sufficient.
+
+---
+
+For token generation and authentication setup, please refer to the official Facets documentation:  
+[https://readme.facets.cloud/reference/authentication-setup](https://readme.facets.cloud/reference/authentication-setup)
+ 
+
 Note: Similar setup is available in Cursor read [here](https://docs.cursor.com/context/model-context-protocol)
 ---
 
