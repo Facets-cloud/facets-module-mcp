@@ -4,8 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Test Commands
 - Install: `pip install -e .` or `uv pip install -e .`
-- Run server: `python facets_server.py`
-- Validate modules: `python facets_server.py validate <module_dir>`
+- Run server (stdio): `python facets_server.py /path/to/modules`
+- Run server (HTTP): `python facets_server.py /path/to/modules --transport streamable-http`
+- Get help: `python facets_server.py --help`
+- Validate modules: Use the `validate_module` tool within the MCP session
 
 ## Code Style Guidelines
 - **Imports**: Group by standard library, third-party, then local imports
