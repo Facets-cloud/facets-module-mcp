@@ -3,6 +3,10 @@
 This guide demonstrates how to collaborate with AI to efficiently build infrastructure modules on the Facets platform,
 using a secure S3 bucket module as our example.
 
+> **Note:** The Facets MCP server now supports both `stdio` (default) and `streamable-http` transports. 
+> For remote deployment or multiple concurrent clients, use the `streamable-http` transport.
+> See the [README](./README.md#transport-modes) for configuration details.
+
 ## The Conversation Flow
 
 Building effective Facets modules through AI collaboration follows a predictable flow:

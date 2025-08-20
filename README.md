@@ -66,8 +66,30 @@ brew install uv
 
 For other methods, see the [official uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
+## Transport Modes
+
+The Facets MCP server supports two transport modes:
+
+### 1. **stdio** (default)
+Traditional stdio-based communication, ideal for local development with Claude Desktop or other MCP clients.
+
+### 2. **streamable-http**
+HTTP-based transport that enables:
+- Remote server deployment
+- Multiple concurrent clients
+- Server-Sent Events (SSE) for real-time streaming
+- Stateless or stateful session management
+- JSON or SSE response formats
+
+Use `--help` to see all available options:
+```bash
+uv run facets-module-mcp --help
+```
+
 
 ### Integration with Claude
+
+#### Option 1: stdio Transport (Default)
 
 Add the following to your `claude_desktop_config.json`:
 
@@ -92,6 +114,32 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
+#### Option 2: Streamable HTTP Transport - does not work with claude desktop (use claude code)
+
+For HTTP-based communication, first start the server:
+
+```bash
+# Basic HTTP server on default port 3000
+uv run facets-module-mcp /path/to/working-directory --transport streamable-http
+
+# Custom port and host
+uv run facets-module-mcp /path/to/working-directory --transport streamable-http --port 8080 --host 0.0.0.0
+
+# Stateless mode with JSON responses
+uv run facets-module-mcp /path/to/working-directory --transport streamable-http --stateless --json-response
+
+# With debug logging
+uv run facets-module-mcp /path/to/working-directory --transport streamable-http --log-level DEBUG
+```
+
+Then configure Claude Code to connect to the HTTP server:
+
+```bash
+claude mcp add --transport http facets-module http://localhost:3000/mcp
+```
+
+#### Option 3: Local Development with stdio
+
 For a locally cloned repository, use:
 
 ```json
@@ -101,9 +149,9 @@ For a locally cloned repository, use:
       "command": "uv",
       "args": [
         "--directory",
-        "/path/to/your/cloned/facets-module-mcp/facets_mcp",
+        "/path/to/your/cloned/facets-module-mcp",
         "run",
-        "facets_server.py",
+        "facets-module-mcp",
         "/path/to/working-directory"
       ],
       "env": {
@@ -123,6 +171,42 @@ For a locally cloned repository, use:
 The `uv` runner automatically manages environment and dependency setup using the `pyproject.toml` file in the MCP directory.
 
 If you have already logged into FTF, specifying `FACETS_PROFILE` is sufficient.
+
+### Running the Server
+
+#### Command Line Options
+
+```bash
+uv run facets-module-mcp [OPTIONS] WORKING_DIRECTORY
+
+Arguments:
+  WORKING_DIRECTORY  Path to the directory containing Facets modules [required]
+
+Options:
+  --transport [stdio|streamable-http]  Transport protocol to use [default: stdio]
+  --port INTEGER                       Port for streamable-http [default: 3000]
+  --host TEXT                         Host for streamable-http [default: localhost]
+  --stateless                         Run in stateless mode (streamable-http only)
+  --json-response                     Use JSON responses instead of SSE (streamable-http only)
+  --log-level [DEBUG|INFO|WARNING|ERROR]  Logging level [default: INFO]
+  --help                              Show this message and exit
+```
+
+#### Examples
+
+```bash
+# Traditional stdio mode (for Claude Desktop)
+uv run facets-module-mcp /path/to/modules
+
+# HTTP server on default port
+uv run facets-module-mcp /path/to/modules --transport streamable-http
+
+# HTTP server with custom settings
+uv run facets-module-mcp /path/to/modules --transport streamable-http --port 8080 --host 0.0.0.0 --log-level DEBUG
+
+# Stateless HTTP with JSON responses
+uv run facets-module-mcp /path/to/modules --transport streamable-http --stateless --json-response
+```
 
 ---
 
