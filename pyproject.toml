@@ -13,8 +13,6 @@ authors = [
 ]
 dependencies = [
     "mcp[cli]>=1.13.0,<2.0.0",
-    "checkov>=3.2.461,<4.0.0",
-    "questionary>=0.0.0,<3.0.0",
     "ftf-cli==0.3.4",
     "facets-control-plane-sdk==1.0.2",
     "facets-hcl==7.0.2",
