@@ -149,9 +149,9 @@ For a locally cloned repository, use:
       "command": "uv",
       "args": [
         "--directory",
-        "/path/to/your/cloned/facets-module-mcp/facets_mcp",
+        "/path/to/your/cloned/facets-module-mcp",
         "run",
-        "facets_server.py",
+        "facets-module-mcp",
         "/path/to/working-directory"
       ],
       "env": {

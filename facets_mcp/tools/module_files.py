@@ -7,7 +7,8 @@ from pathlib import Path
 
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 
-from facets_mcp.config import mcp, working_directory
+from facets_mcp import config
+from facets_mcp.config import mcp
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.file_utils import (
     ensure_path_in_working_directory,
@@ -48,7 +49,7 @@ def list_files(module_path: str) -> str:
         str: A JSON-formatted string with operation details and file list found in module directory.
     """
     try:
-        file_list = list_files_in_directory(module_path, working_directory)
+        file_list = list_files_in_directory(module_path, config.working_directory)
         return json.dumps(
             {
                 "success": True,
@@ -85,8 +86,8 @@ def read_file(file_path: str) -> str:
         str: JSON formatted response with file content or error information.
     """
     try:
-        # Assuming working_directory is defined elsewhere in your code
-        file_content = read_file_content(file_path, working_directory)
+        # Get file content with configured working directory
+        file_content = read_file_content(file_path, config.working_directory)
         return json.dumps(
             {
                 "success": True,
@@ -146,7 +147,7 @@ def write_config_files(module_path: str, facets_yaml: str, dry_run: bool = True)
     try:
         # Normalize paths using Path for consistent handling across platforms
         full_module_path = Path(module_path).resolve()
-        working_dir = Path(working_directory).resolve()
+        working_dir = Path(config.working_directory).resolve()
 
         # Check if the module path is within working directory
         try:
@@ -330,7 +331,7 @@ def write_resource_file(module_path: str, file_name: str, content: str) -> str:
             )
 
         full_module_path = os.path.abspath(module_path)
-        if not full_module_path.startswith(os.path.abspath(working_directory)):
+        if not full_module_path.startswith(os.path.abspath(config.working_directory)):
             return json.dumps(
                 {
                     "success": False,
@@ -518,7 +519,7 @@ def write_outputs(
     """
     try:
         full_module_path = ensure_path_in_working_directory(
-            module_path, working_directory
+            module_path, config.working_directory
         )
 
         # Initialize API client for validation
@@ -623,13 +624,13 @@ def write_readme_file(module_path: str, content: str) -> str:
     """
     try:
         full_module_path = os.path.abspath(module_path)
-        if not full_module_path.startswith(os.path.abspath(working_directory)):
+        if not full_module_path.startswith(os.path.abspath(config.working_directory)):
             return json.dumps(
                 {
                     "success": False,
                     "message": "Attempt to write files outside of the working directory.",
                     "instructions": "Inform User: Attempt to write files outside of the working directory.",
-                    "error": f"Invalid module path: '{module_path}' is outside of the working directory '{working_directory}'.",
+                    "error": f"Invalid module path: '{module_path}' is outside of the working directory '{config.working_directory}'.",
                 },
                 indent=2,
             )
@@ -693,7 +694,7 @@ def write_generic_file(module_path: str, file_name: str, content: str) -> str:
         )
     try:
         full_module_path = Path(module_path).resolve()
-        working_dir = Path(working_directory).resolve()
+        working_dir = Path(config.working_directory).resolve()
         # Check if the module path is within working directory
         try:
             full_module_path.relative_to(working_dir)
@@ -791,11 +792,13 @@ def edit_file_block(
             )
 
         # Validate file path is within working directory
-        full_file_path = ensure_path_in_working_directory(file_path, working_directory)
+        full_file_path = ensure_path_in_working_directory(
+            file_path, config.working_directory
+        )
 
         # Read current file content
         try:
-            current_content = read_file_content(file_path, working_directory)
+            current_content = read_file_content(file_path, config.working_directory)
         except Exception as e:
             return json.dumps(
                 {
