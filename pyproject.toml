@@ -16,7 +16,7 @@ dependencies = [
     "checkov",
     "questionary",
     "ftf-cli==0.3.4",
-    "facets-control-plane-sdk==1.0.2",
+    "facets-control-plane-sdk==1.0.3",
     "facets-hcl",
 ]
 requires-python = ">=3.11"
