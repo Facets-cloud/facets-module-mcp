@@ -2,8 +2,7 @@ import json
 import os
 from pathlib import Path
 
-from facets_mcp import config
-from facets_mcp.config import mcp
+from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.file_utils import get_file_content
 
 
@@ -61,7 +60,7 @@ def FIRST_STEP_get_instructions() -> str:
     instructions.update(read_markdown_files(base_dir))
 
     # Read supplementary instructions from mcp_instructions directory
-    working_dir = Path(config.working_directory).resolve()
+    working_dir = Path(working_directory).resolve()
     supplementary_dir = os.path.join(working_dir, "mcp_instructions")
     supplementary_instructions = read_markdown_files(supplementary_dir)
 

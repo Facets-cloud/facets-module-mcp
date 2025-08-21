@@ -5,8 +5,7 @@ Import tools for discovering Terraform resources and adding import declarations 
 import json
 import os
 
-from facets_mcp import config
-from facets_mcp.config import mcp
+from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.file_utils import ensure_path_in_working_directory
 from facets_mcp.utils.ftf_command_utils import run_ftf_command
 
@@ -26,7 +25,7 @@ def discover_terraform_resources(module_path: str) -> str:
     try:
         # Ensure the module path is within the working directory for security
         full_module_path = ensure_path_in_working_directory(
-            module_path, config.working_directory
+            module_path, working_directory
         )
 
         if not os.path.exists(full_module_path):
@@ -136,7 +135,7 @@ def add_import_declaration(
     try:
         # Ensure the module path is within the working directory for security
         full_module_path = ensure_path_in_working_directory(
-            module_path, config.working_directory
+            module_path, working_directory
         )
 
         if not os.path.exists(full_module_path):

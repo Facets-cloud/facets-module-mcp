@@ -4,7 +4,7 @@ import zipfile
 
 import requests
 
-from facets_mcp import config
+from facets_mcp.config import working_directory
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.file_utils import ensure_path_in_working_directory
 
@@ -26,7 +26,7 @@ def download_and_extract_module_zip(
     try:
         # Ensure extract_to is within the working directory
         full_extract_path = ensure_path_in_working_directory(
-            extract_to, config.working_directory
+            extract_to, working_directory
         )
         os.makedirs(full_extract_path, exist_ok=True)
 
