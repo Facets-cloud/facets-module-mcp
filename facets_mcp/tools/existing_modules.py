@@ -4,8 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from facets_mcp import config
-from facets_mcp.config import mcp
+from facets_mcp.config import mcp, working_directory
 
 
 def read_facets_file(facets_file):
@@ -17,7 +16,7 @@ def read_facets_file(facets_file):
 def fetch_modules(search_string: str = None):
     """Utility function to fetch modules based on optional search string."""
     modules = []
-    root_path = Path(config.working_directory)
+    root_path = Path(working_directory)
 
     # Collect all matching facets.yaml files
     facets_files = list(root_path.rglob("facets.yaml"))

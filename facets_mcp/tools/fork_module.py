@@ -6,8 +6,7 @@ import yaml
 from swagger_client.api.module_management_api import ModuleManagementApi
 from swagger_client.rest import ApiException
 
-from facets_mcp import config
-from facets_mcp.config import mcp
+from facets_mcp.config import mcp, working_directory
 from facets_mcp.utils.client_utils import ClientUtils
 from facets_mcp.utils.module_download_utils import download_and_extract_module_zip
 
@@ -308,7 +307,7 @@ def fork_existing_module(
         target_directory = os.path.join(
             source_module["intent"], new_flavor, new_version
         )
-        full_target_path = os.path.join(config.working_directory, target_directory)
+        full_target_path = os.path.join(working_directory, target_directory)
 
         target_info = {
             "intent": source_module["intent"],
