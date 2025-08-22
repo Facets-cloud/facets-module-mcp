@@ -42,7 +42,7 @@ def list_files(module_path: str) -> str:
     Always ask User if he wants to add any variables or use any other FTF commands
 
     Args:
-        module_path (str): The path to the module directory.
+        module_path (str): The absolute path to the module directory.
 
     Returns:
         str: A JSON-formatted string with operation details and file list found in module directory.
