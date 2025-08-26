@@ -37,9 +37,9 @@ def fetch_modules(search_string: str = None):
         # Only filter if search_string is provided
         if search_string:
             if (
-                search_string in facets_content.get("intent", "")
-                or search_string in facets_content.get("flavor", "")
-                or search_string in facets_content.get("version", "")
+                search_string in str(facets_content.get("intent", ""))
+                or search_string in str(facets_content.get("flavor", ""))
+                or search_string in str(facets_content.get("version", ""))
             ):
                 modules.append(
                     {
