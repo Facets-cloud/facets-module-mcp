@@ -282,7 +282,12 @@ def register_output_type(
             temp_file_path = create_temp_yaml_file(output_type_def)
 
             # Build the command
-            command = ["ftf", "register-output-type", temp_file_path, "--inferred-from-module"]
+            command = [
+                "ftf",
+                "register-output-type",
+                temp_file_path,
+                "--inferred-from-module",
+            ]
 
             # Run the command
             result = run_ftf_command(command)
