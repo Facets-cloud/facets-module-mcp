@@ -78,7 +78,50 @@ outputs:
           type: "@outputs/project-id"
           title: "The GCP Project id"
       ```
-<important> no need to add properties in the outputs block like inputs.<important>
+<important> no need to add properties in the outputs block like inputs.</important>
       This allows consuming modules to wire only the specific part of the output they require, while still having the
       option to consume the entire object via `default`.
+
+---
+
+### 🔐 Marking Output Fields as Sensitive
+
+When calling `write_outputs`, every field requires both `value` and `sensitive` keys. The value can be any type (string, bool, number, list, dict).
+
+```python
+write_outputs(
+    module_path="/path/to/module",
+    output_attributes={
+        # String values
+        "instance_id": {"value": "aws_instance.main.id", "sensitive": False},
+        "api_key": {"value": "var.api_key", "sensitive": True},
+        
+        # Complex types
+        "config": {"value": {"region": "us-east-1", "zones": ["a", "b"]}, "sensitive": False},
+        "credentials": {"value": ["token1", "token2"], "sensitive": True},
+        "enabled": {"value": True, "sensitive": False}
+    }
+)
+```
+
+Generates:
+```hcl
+locals {
+  output_attributes = {
+    instance_id = aws_instance.main.id
+    api_key = sensitive(var.api_key)
+    config = {
+      region = "us-east-1"
+      zones = ["a", "b"]
+    }
+    credentials = sensitive(["token1", "token2"])
+    enabled = true
+    secrets = ["api_key", "credentials"]  # Auto-generated for Facets UI
+  }
+}
+```
+
+<important>Mark any field containing passwords, tokens, keys, or credentials as sensitive.</important>
+
+---
 
