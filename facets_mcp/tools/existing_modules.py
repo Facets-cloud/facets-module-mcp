@@ -89,10 +89,16 @@ def get_local_modules() -> str:
         limited_modules = modules[:10]
         instruction = "Inform User: For more modules, use the `find module` command to search for and work on a specific module."
 
+        # Create appropriate message based on whether we're showing all or limited results
+        if total_modules_count <= 10:
+            message = f"Found {total_modules_count} modules."
+        else:
+            message = f"Found {len(limited_modules)} modules (showing first 10 of {total_modules_count})."
+
         return json.dumps(
             {
                 "success": True,
-                "message": f"Found {len(limited_modules)} modules (showing first 10 of {total_modules_count}).",
+                "message": message,
                 "instructions": instruction,
                 "data": {
                     "modules": limited_modules,
