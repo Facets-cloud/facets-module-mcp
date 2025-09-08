@@ -4,7 +4,9 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
+from pydantic import BaseModel, Field
 from swagger_client.api.tf_output_management_api import TFOutputManagementApi
 
 from facets_mcp.config import mcp, working_directory
@@ -498,25 +500,53 @@ def list_all_output_types() -> str:
         )
 
 
+# Pydantic models for structured output fields
+class OutputField(BaseModel):
+    """Model for a single output field with required sensitive flag."""
+
+    value: Any = Field(..., description="The actual value of the field")
+    sensitive: bool = Field(
+        ..., description="Whether this field contains sensitive data (required)"
+    )
+
+
 @mcp.tool()
 def write_outputs(
-    module_path: str, output_attributes: dict = {}, output_interfaces: dict = {}
+    module_path: str,
+    output_attributes: Dict[str, OutputField] = None,
+    output_interfaces: Dict[str, OutputField] = None,
 ) -> str:
     """
-    Write the outputs.tf file for a module with a local block containing outputs_attributes and outputs_interfaces.
+    Write the outputs.tf file for a module with properly formatted Terraform locals block.
 
-    This function requires facets.yaml to exist in the module path before writing outputs.tf.
-    If facets.yaml doesn't exist, it will fail with a message instructing to call write_config_files first.
+    Each field must have 'value' (any type: string, bool, number, list, dict) and 'sensitive' (bool) keys.
 
     Args:
-        module_path (str): Path to the module directory.
-        output_attributes (dict): Map of output attributes.
-        output_interfaces (dict): Map of output interfaces.
+        module_path (str): Path to the module directory (must contain facets.yaml).
+        output_attributes (dict): Map where each field is: {"value": <any type>, "sensitive": bool}
+        output_interfaces (dict): Map where each field is: {"value": <any type>, "sensitive": bool}
+
+    Example:
+        write_outputs(
+            module_path="/path/to/module",
+            output_attributes={
+                "instance_id": {"value": "aws_instance.example.id", "sensitive": False},
+                "config": {"value": {"region": "us-east-1", "zone": "a"}, "sensitive": False},
+                "api_keys": {"value": ["key1", "key2"], "sensitive": True},
+                "enabled": {"value": True, "sensitive": False}
+            }
+        )
 
     Returns:
         str: JSON formatted success or error message.
     """
     try:
+        # Handle None defaults
+        if output_attributes is None:
+            output_attributes = {}
+        if output_interfaces is None:
+            output_interfaces = {}
+
         full_module_path = ensure_path_in_working_directory(
             module_path, working_directory
         )
@@ -540,8 +570,61 @@ def write_outputs(
                 indent=2,
             )
 
+        # Helper function to validate and process output fields
+        def process_output_fields(fields_dict, field_type_name):
+            """Validate fields and return processed dict with sensitive field list."""
+            validated = {}
+            sensitive_fields = []
+
+            for key, field_data in fields_dict.items():
+                try:
+                    # If it's already an OutputField instance, use it directly
+                    if isinstance(field_data, OutputField):
+                        validated_field = field_data
+                    # Otherwise try to parse it as a dict
+                    elif isinstance(field_data, dict):
+                        validated_field = OutputField(**field_data)
+                    else:
+                        raise ValueError(
+                            "Field must be an OutputField instance or dict with 'value' and 'sensitive' keys"
+                        )
+
+                    validated[key] = validated_field
+                    if validated_field.sensitive:
+                        sensitive_fields.append(key)
+
+                except Exception as e:
+                    return None, json.dumps(
+                        {
+                            "success": False,
+                            "message": f"Invalid structure for field '{key}' in {field_type_name}",
+                            "error": str(e),
+                            "instructions": "Each field must have 'value' and 'sensitive' keys: {'value': <any>, 'sensitive': bool}",
+                        },
+                        indent=2,
+                    )
+
+            return validated, sensitive_fields
+
+        # Process attributes
+        validated_attributes, result = process_output_fields(
+            output_attributes, "output_attributes"
+        )
+        if validated_attributes is None:
+            return result  # result contains the error message
+        sensitive_attributes = result  # result contains the sensitive field list
+
+        # Process interfaces
+        validated_interfaces, result = process_output_fields(
+            output_interfaces, "output_interfaces"
+        )
+        if validated_interfaces is None:
+            return result  # result contains the error message
+        sensitive_interfaces = result  # result contains the sensitive field list
+
         # Helper to render values correctly for Terraform
         def render_terraform_value(v):
+            # Standard rendering for values
             if isinstance(v, bool):
                 return str(v).lower()
             elif isinstance(v, (int, float)):
@@ -562,28 +645,50 @@ def write_outputs(
             else:
                 return json.dumps(v)
 
+        # Helper to build terraform block for a field set
+        def build_terraform_block(block_name, validated_fields, sensitive_fields):
+            """Build terraform configuration block for output fields."""
+            lines = []
+            if validated_fields:
+                lines.append(f"  {block_name} = {{")
+                for k, field_model in validated_fields.items():
+                    rendered_value = render_terraform_value(field_model.value)
+                    if field_model.sensitive:
+                        lines.append(f"    {k} = sensitive({rendered_value})")
+                    else:
+                        lines.append(f"    {k} = {rendered_value}")
+
+                # Add secrets array if there are sensitive fields
+                if sensitive_fields:
+                    secrets_str = (
+                        "["
+                        + ", ".join(f'"{field}"' for field in sensitive_fields)
+                        + "]"
+                    )
+                    lines.append(f"    secrets = {secrets_str}")
+
+                lines.append("  }")
+            return lines
+
         # Build outputs.tf content
         content_lines = ["locals {"]
-        if output_attributes is not None:
-            content_lines.append("  output_attributes = {")
-            for k, v in output_attributes.items():
-                content_lines.append(f"    {k} = {render_terraform_value(v)}")
-            content_lines.append("  }")
-        if output_interfaces is not None:
-            content_lines.append("  output_interfaces = {")
-            for k, v in output_interfaces.items():
-                content_lines.append(f"    {k} = {render_terraform_value(v)}")
-            content_lines.append("  }")
+        content_lines.extend(
+            build_terraform_block(
+                "output_attributes", validated_attributes, sensitive_attributes
+            )
+        )
+        content_lines.extend(
+            build_terraform_block(
+                "output_interfaces", validated_interfaces, sensitive_interfaces
+            )
+        )
         content_lines.append("}")
 
         content = "\n".join(content_lines)
 
         # Write to outputs.tf
         file_path = os.path.join(full_module_path, "outputs.tf")
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
 
         return json.dumps(
