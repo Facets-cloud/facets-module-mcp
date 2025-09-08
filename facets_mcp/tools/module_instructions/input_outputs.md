@@ -98,7 +98,8 @@ write_outputs(
         
         # Complex types
         "config": {"value": {"region": "us-east-1", "zones": ["a", "b"]}, "sensitive": False},
-        "credentials": {"value": ["token1", "token2"], "sensitive": True},
+        # Do not commit literal secrets to VCS; use variables or data sources
+        "credentials": {"value": ["data.aws_secretsmanager_secret.api_key.secret_string", "data.aws_secretsmanager_secret.db_password.secret_string"], "sensitive": True},
         "enabled": {"value": True, "sensitive": False}
     }
 )
