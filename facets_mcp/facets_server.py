@@ -2,9 +2,11 @@ import os
 import sys
 
 # Import all modules to register their tools and prompts with MCP
+import facets_mcp.prompts.facets_actions_prompt  # noqa: F401
 import facets_mcp.prompts.fork_module_prompt  # noqa: F401
 import facets_mcp.tools.deploy_module  # noqa: F401
 import facets_mcp.tools.existing_modules  # noqa: F401
+import facets_mcp.tools.facets_actions  # noqa: F401
 import facets_mcp.tools.fork_module  # noqa: F401
 import facets_mcp.tools.ftf_tools  # noqa: F401
 import facets_mcp.tools.import_tools  # noqa: F401
