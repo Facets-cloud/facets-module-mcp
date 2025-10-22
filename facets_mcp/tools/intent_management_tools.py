@@ -360,11 +360,9 @@ def map_module_to_project_type(
             description=(
                 description
                 if description is not None
-                else getattr(existing, "description", f"Intent {intent}")
+                else getattr(existing, "description", f"Intent '{intent}'")
             ),
-            icon_url=icon_url
-            if icon_url is not None
-            else getattr(existing, "icon_url", None),
+            icon_url=icon_url,  # Only use explicitly provided icon_url
             inferred_from_module=False,
         )
 

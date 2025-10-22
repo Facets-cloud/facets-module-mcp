@@ -158,7 +158,7 @@ def publish_module_to_facets_cp(
         # Build common args
         common_args = []
         if auto_create_intent:
-            common_args.extend(["-a", str(auto_create_intent)])
+            common_args.extend(["-a", "true"])
         # Always include git details
         common_args.extend(["-g", git_repo_url, "-r", git_ref])
         if skip_terraform_validation_if_provider_not_found:
@@ -591,9 +591,7 @@ def push_preview_module_to_facets_cp(
 
         command = ["ftf", "preview-module", module_path]
         if auto_create_intent:
-            command.extend(["-a", str(auto_create_intent)])
-        # Always mark previewed modules as publishable
-        command.extend(["-f", "true"])
+            command.extend(["-a", "true"])
         if skip_terraform_validation_if_provider_not_found:
             command.extend(["--skip-terraform-validation", "true"])
 
