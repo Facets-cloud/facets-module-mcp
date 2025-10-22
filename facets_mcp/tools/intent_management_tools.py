@@ -1,8 +1,12 @@
 """
 Intent management tools for querying and creating/updating intents in the control plane.
+
+Also includes helpers to map a local module's intent to a control-plane project type (intent type).
 """
 
 import json
+import os
+import yaml
 
 from swagger_client.api.intent_management_api import IntentManagementApi
 from swagger_client.models.intent_request_dto import IntentRequestDTO
@@ -226,7 +230,6 @@ def list_all_intents() -> str:
             },
             indent=2,
         )
-
     except ApiException as e:
         return json.dumps(
             {
@@ -247,3 +250,168 @@ def list_all_intents() -> str:
             },
             indent=2,
         )
+
+
+def _read_module_intent(module_path: str) -> tuple[bool, str, str]:
+    """
+    Internal: Read the module intent from facets.yaml.
+    Returns (ok, intent, error_message)
+    """
+    facets_path = os.path.join(os.path.abspath(module_path), "facets.yaml")
+    if not os.path.exists(facets_path):
+        return False, "", "facets.yaml not found in module path."
+    try:
+        with open(facets_path) as f:
+            facets_yaml = yaml.safe_load(f)
+        intent = facets_yaml.get("intent")
+        if not intent:
+            return False, "", "No 'intent' field found in facets.yaml."
+        return True, intent, ""
+    except Exception as e:
+        return False, "", f"Error reading facets.yaml: {e!s}"
+
+
+ 
+
+
+@mcp.tool()
+def map_module_to_project_type(
+    module_path: str,
+    project_type: str,
+    display_name: str | None = None,
+    description: str | None = None,
+    icon_url: str | None = None,
+) -> str:
+    """
+    Map the module's intent to a control-plane project type by creating/updating the intent type.
+    
+    Note: Built-in intents cannot be modified. If you need to modify an intent that is built-in,
+    you should create a new custom intent with a different name.
+
+    Args:
+        module_path: Path containing facets.yaml with 'intent'
+        project_type: Desired intent type to set in control plane
+        display_name: Optional display name override (defaults to existing)
+        description: Optional description override (defaults to existing)
+        icon_url: Optional icon URL (only if explicitly provided)
+        
+    Returns:
+        JSON string with success/error information
+        
+    Example:
+        # For a custom intent:
+        map_module_to_project_type('/path/to/module', 'custom_type')
+        
+        # For a built-in intent, you'll need to create a new intent first:
+        create_or_update_intent(
+            name='my-custom-mongo',
+            intent_type='database',
+            display_name='My Custom Mongo',
+            description='Custom MongoDB intent'
+        )
+    """
+    ok, intent, err = _read_module_intent(module_path)
+    if not ok:
+        return json.dumps(
+            {"success": False, "message": err, "instructions": "Inform User: Fix facets.yaml and retry."},
+            indent=2,
+        )
+
+    try:
+        api_client = ClientUtils.get_client()
+        intent_api = IntentManagementApi(api_client)
+
+        # Fetch existing intent if present to preserve fields
+        existing = None
+        all_intents = intent_api.get_all_intents()
+        for i in all_intents:
+            if getattr(i, "name", "") == intent:
+                existing = i
+                # Check if this is a built-in intent
+                if getattr(i, "built_in", False) or getattr(i, "is_builtin", False):
+                    return json.dumps(
+                        {
+                            "success": False,
+                            "message": f"Cannot modify built-in intent '{intent}'",
+                            "error": "Built-in intents cannot be modified",
+                            "instructions": (
+                                "This is a built-in intent and cannot be modified.\n"
+                                f"To proceed, you can either:\n"
+                                "1. Use the intent as-is without modification\n"
+                                "2. Create a new custom intent using create_or_update_intent()\n"
+                                "3. Use list_all_intents() to see available intents"
+                            ),
+                            "is_builtin": True
+                        },
+                        indent=2,
+                    )
+                break
+
+        # Prepare payload preserving existing values if not provided
+        payload = IntentRequestDTO(
+            name=intent,
+            type=project_type,
+            display_name=(
+                display_name if display_name is not None else getattr(existing, "display_name", intent)
+            ),
+            description=(
+                description if description is not None else getattr(existing, "description", f"Intent {intent}")
+            ),
+            icon_url=icon_url if icon_url is not None else getattr(existing, "icon_url", None),
+            inferred_from_module=False,
+        )
+
+        response = intent_api.create_or_update_intent(payload)
+        return json.dumps(
+            {
+                "success": True,
+                "message": f"Mapped intent '{intent}' to project type '{project_type}'.",
+                "data": {
+                    "intent": intent,
+                    "project_type": project_type,
+                    "response": {
+                        "name": getattr(response, "name", ""),
+                        "type": getattr(response, "type", ""),
+                        "display_name": getattr(response, "display_name", ""),
+                        "description": getattr(response, "description", ""),
+                        "icon_url": getattr(response, "icon_url", ""),
+                    },
+                },
+            },
+            indent=2,
+        )
+    except ApiException as e:
+        error_msg = str(e)
+        if "Cannot update a built-in intent" in error_msg:
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": f"Cannot modify built-in intent '{intent}'",
+                    "error": error_msg,
+                    "instructions": (
+                        "This is a built-in intent and cannot be modified.\n"
+                        f"To proceed, you can either:\n"
+                        "1. Use the intent as-is without modification\n"
+                        "2. Create a new custom intent using create_or_update_intent()\n"
+                        "3. Use list_all_intents() to see available intents"
+                    ),
+                    "is_builtin": True
+                },
+                indent=2,
+            )
+        return json.dumps(
+            {
+                "success": False,
+                "message": f"Failed to map intent '{intent}' to project type '{project_type}'.",
+                "error": f"API error: {error_msg}",
+                "instructions": "Check the intent name and your permissions, then try again.",
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps(
+            {"success": False, "message": "Error mapping project type.", "error": str(e)},
+            indent=2,
+        )
+
+    
