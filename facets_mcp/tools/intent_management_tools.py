@@ -6,8 +6,8 @@ Also includes helpers to map a local module's intent to a control-plane project 
 
 import json
 import os
-import yaml
 
+import yaml
 from swagger_client.api.intent_management_api import IntentManagementApi
 from swagger_client.models.intent_request_dto import IntentRequestDTO
 from swagger_client.rest import ApiException
@@ -271,9 +271,6 @@ def _read_module_intent(module_path: str) -> tuple[bool, str, str]:
         return False, "", f"Error reading facets.yaml: {e!s}"
 
 
- 
-
-
 @mcp.tool()
 def map_module_to_project_type(
     module_path: str,
@@ -284,7 +281,7 @@ def map_module_to_project_type(
 ) -> str:
     """
     Map the module's intent to a control-plane project type by creating/updating the intent type.
-    
+
     Note: Built-in intents cannot be modified. If you need to modify an intent that is built-in,
     you should create a new custom intent with a different name.
 
@@ -294,14 +291,14 @@ def map_module_to_project_type(
         display_name: Optional display name override (defaults to existing)
         description: Optional description override (defaults to existing)
         icon_url: Optional icon URL (only if explicitly provided)
-        
+
     Returns:
         JSON string with success/error information
-        
+
     Example:
         # For a custom intent:
         map_module_to_project_type('/path/to/module', 'custom_type')
-        
+
         # For a built-in intent, you'll need to create a new intent first:
         create_or_update_intent(
             name='my-custom-mongo',
@@ -313,7 +310,11 @@ def map_module_to_project_type(
     ok, intent, err = _read_module_intent(module_path)
     if not ok:
         return json.dumps(
-            {"success": False, "message": err, "instructions": "Inform User: Fix facets.yaml and retry."},
+            {
+                "success": False,
+                "message": err,
+                "instructions": "Inform User: Fix facets.yaml and retry.",
+            },
             indent=2,
         )
 
@@ -336,12 +337,12 @@ def map_module_to_project_type(
                             "error": "Built-in intents cannot be modified",
                             "instructions": (
                                 "This is a built-in intent and cannot be modified.\n"
-                                f"To proceed, you can either:\n"
+                                "To proceed, you can either:\n"
                                 "1. Use the intent as-is without modification\n"
                                 "2. Create a new custom intent using create_or_update_intent()\n"
                                 "3. Use list_all_intents() to see available intents"
                             ),
-                            "is_builtin": True
+                            "is_builtin": True,
                         },
                         indent=2,
                     )
@@ -352,12 +353,18 @@ def map_module_to_project_type(
             name=intent,
             type=project_type,
             display_name=(
-                display_name if display_name is not None else getattr(existing, "display_name", intent)
+                display_name
+                if display_name is not None
+                else getattr(existing, "display_name", intent)
             ),
             description=(
-                description if description is not None else getattr(existing, "description", f"Intent {intent}")
+                description
+                if description is not None
+                else getattr(existing, "description", f"Intent {intent}")
             ),
-            icon_url=icon_url if icon_url is not None else getattr(existing, "icon_url", None),
+            icon_url=icon_url
+            if icon_url is not None
+            else getattr(existing, "icon_url", None),
             inferred_from_module=False,
         )
 
@@ -390,12 +397,12 @@ def map_module_to_project_type(
                     "error": error_msg,
                     "instructions": (
                         "This is a built-in intent and cannot be modified.\n"
-                        f"To proceed, you can either:\n"
+                        "To proceed, you can either:\n"
                         "1. Use the intent as-is without modification\n"
                         "2. Create a new custom intent using create_or_update_intent()\n"
                         "3. Use list_all_intents() to see available intents"
                     ),
-                    "is_builtin": True
+                    "is_builtin": True,
                 },
                 indent=2,
             )
@@ -410,8 +417,10 @@ def map_module_to_project_type(
         )
     except Exception as e:
         return json.dumps(
-            {"success": False, "message": "Error mapping project type.", "error": str(e)},
+            {
+                "success": False,
+                "message": "Error mapping project type.",
+                "error": str(e),
+            },
             indent=2,
         )
-
-    
