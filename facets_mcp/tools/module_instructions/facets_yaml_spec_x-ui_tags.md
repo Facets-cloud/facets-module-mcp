@@ -43,6 +43,18 @@ x-ui-toggle: true  # Render this field group as collapsible. Use this to keep th
 ```
 
 ```yaml
+x-ui-typeable: true  # Allows a field value to be typed instead of selecting it from the dropdown values.
+```
+
+```yaml
+x-ui-placeholder: "Enter CPU value"  # Provide example input placeholder text for any field.
+```
+
+```yaml
+x-ui-editor: true # Use editor with language selection option. Use this when you want to enter different language scripts. Final output will be saved in string format.
+```
+
+```yaml
 x-ui-yaml-editor: true  # Use YAML editor for complex object input. Use this when you want to surface a yaml editor, use this for complex objects only
 ```
 DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
@@ -53,6 +65,11 @@ DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 ```yaml
 x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for validation failure
 ```
+
+x-ui-compare:
+  field: spec.runtime.size.cpu_limit # IMPORTANT: path from spec till the field location
+  comparator: '<=' # operator with which comparison to be done
+  x-ui-error-message: 'CPU cannot be more than CPU limit'  # Custom error for validation failure
 
 ```yaml
 x-ui-visible-if:
