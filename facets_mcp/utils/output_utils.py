@@ -188,6 +188,105 @@ def _infer_json_type(value: Any) -> str:
         return "string"  # default type
 
 
+def normalize_schema_fields(schema_dict: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize JSON schema fields by auto-adding 'type': 'object' when 'properties' is present.
+
+    This helps AI agents who might forget to include the type field when defining object schemas.
+
+    Args:
+        schema_dict: Dictionary containing schema definitions
+
+    Returns:
+        Normalized schema dictionary
+    """
+    if not isinstance(schema_dict, dict):
+        return schema_dict
+
+    normalized = {}
+    for key, value in schema_dict.items():
+        if isinstance(value, dict):
+            # If this field has 'properties' but no 'type', add 'type': 'object'
+            if "properties" in value and "type" not in value:
+                normalized[key] = {"type": "object", **value}
+            else:
+                normalized[key] = value
+        else:
+            normalized[key] = value
+
+    return normalized
+
+
+def validate_attributes_and_interfaces_format(
+    interfaces: dict[str, Any] | None = None,
+    attributes: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """
+    Validate that attributes and interfaces are not incorrectly nested inside a 'properties' key.
+
+    This is a common mistake when AI agents confuse JSON schema structure with the expected input format.
+
+    Args:
+        interfaces (Dict[str, Any], optional): Dictionary of output interfaces
+        attributes (Dict[str, Any], optional): Dictionary of output attributes
+
+    Returns:
+        Dict[str, Any] | None: Error dictionary if validation fails, None if valid
+    """
+    error_parts = []
+
+    # Check if attributes has only 'properties' key at top level
+    if attributes and len(attributes) == 1 and "properties" in attributes:
+        error_parts.append(
+            "❌ Error: 'attributes' parameter is incorrectly nested inside a 'properties' key."
+        )
+        error_parts.append("")
+        error_parts.append("❌ What you sent:")
+        error_parts.append("  attributes = {")
+        error_parts.append('    "properties": {')
+        error_parts.append('      "field1": {"type": "string"},')
+        error_parts.append('      "field2": {"type": "number"}')
+        error_parts.append("    }")
+        error_parts.append("  }")
+        error_parts.append("")
+        error_parts.append("✅ Correct format (remove the outer 'properties' wrapper):")
+        error_parts.append("  attributes = {")
+        error_parts.append('    "field1": {"type": "string"},')
+        error_parts.append('    "field2": {"type": "number"}')
+        error_parts.append("  }")
+        error_parts.append("")
+
+    # Check if interfaces has only 'properties' key at top level
+    if interfaces and len(interfaces) == 1 and "properties" in interfaces:
+        error_parts.append(
+            "❌ Error: 'interfaces' parameter is incorrectly nested inside a 'properties' key."
+        )
+        error_parts.append("")
+        error_parts.append("❌ What you sent:")
+        error_parts.append("  interfaces = {")
+        error_parts.append('    "properties": {')
+        error_parts.append('      "default": {"type": "object", "properties": {...}}')
+        error_parts.append("    }")
+        error_parts.append("  }")
+        error_parts.append("")
+        error_parts.append("✅ Correct format (remove the outer 'properties' wrapper):")
+        error_parts.append("  interfaces = {")
+        error_parts.append('    "default": {"type": "object", "properties": {...}}')
+        error_parts.append("  }")
+        error_parts.append("")
+
+    if error_parts:
+        error_parts.append(
+            "💡 Tip: The function expects field names directly, not wrapped in 'properties'."
+        )
+        error_parts.append(
+            "      The function will automatically create the proper JSON schema structure."
+        )
+        return {"error": "\n".join(error_parts)}
+
+    return None
+
+
 def infer_properties_from_interfaces_and_attributes(
     interfaces: dict[str, Any] | None = None,
     attributes: dict[str, Any] | None = None,
@@ -198,6 +297,8 @@ def infer_properties_from_interfaces_and_attributes(
     This function assumes the interfaces and attributes are already in JSON schema format.
     It generates a clean structure suitable for both schema validation and lookup trees.
 
+    Automatically normalizes schemas by adding 'type': 'object' when 'properties' is present.
+
     Args:
         interfaces (Dict[str, Any], optional): Dictionary of output interfaces in JSON schema format
         attributes (Dict[str, Any], optional): Dictionary of output attributes in JSON schema format
@@ -206,6 +307,12 @@ def infer_properties_from_interfaces_and_attributes(
         Dict[str, Any]: JSON schema properties definition
     """
     try:
+        # Normalize the inputs to auto-add 'type': 'object' where needed
+        if attributes:
+            attributes = normalize_schema_fields(attributes)
+        if interfaces:
+            interfaces = normalize_schema_fields(interfaces)
+
         # Create base structure
         properties = {"type": "object", "properties": {}}
 
@@ -213,7 +320,7 @@ def infer_properties_from_interfaces_and_attributes(
         if attributes:
             attributes_properties = {}
             for attr_name, attr_schema in attributes.items():
-                # Add the attribute as-is (assuming it's already a valid schema)
+                # Add the attribute as-is (now normalized)
                 attributes_properties[attr_name] = attr_schema
 
             properties["properties"]["attributes"] = {
@@ -224,7 +331,7 @@ def infer_properties_from_interfaces_and_attributes(
         if interfaces:
             interfaces_properties = {}
             for intf_name, intf_schema in interfaces.items():
-                # Add the interface as-is (assuming it's already a valid schema)
+                # Add the interface as-is (now normalized)
                 interfaces_properties[intf_name] = intf_schema
 
             properties["properties"]["interfaces"] = {
