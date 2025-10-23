@@ -21,6 +21,7 @@ from facets_mcp.utils.output_utils import (
     compare_output_types,
     infer_properties_from_interfaces_and_attributes,
     prepare_output_type_registration,
+    validate_attributes_and_interfaces_format,
 )
 from facets_mcp.utils.validation_utils import validate_no_provider_blocks
 from facets_mcp.utils.yaml_utils import validate_module_output_types
@@ -134,10 +135,34 @@ def register_output_type(
 
     Args:
     - name (str): The name of the output type in the format '@namespace/name'.
-    - interfaces (Dict[str, Any], optional): A dictionary defining the output interfaces, similar to write_outputs, but as json schema.
-    - attributes (Dict[str, Any], optional): A dictionary defining the output attributes, similar to write_outputs, but as json schema.
-    - providers (List[Dict[str, str]], optional): A list of provider dictionaries, each containing 'name', 'source', and 'version'.
-    - override_confirmation (bool): Flag to confirm overriding the existing output type if found with different properties/providers.
+
+    - interfaces (Dict[str, Any], optional): Dictionary of output interfaces as JSON schema.
+      Each key is an interface name, value is a JSON schema definition.
+
+    - attributes (Dict[str, Any], optional): Dictionary of output attributes as JSON schema.
+      Each key is an attribute name, value is a JSON schema definition.
+
+      Example:
+      {
+          "default": {
+              "type": "object",
+              "properties": {
+                  "topic_name": {"type": "string"},
+                  "topic_id": {"type": "string"}
+              }
+          }
+      }
+
+      ❌ INCORRECT (do NOT wrap field names in outer "properties" key):
+      {
+          "properties": {
+              "default": {...}
+          }
+      }
+
+    - providers (List[Dict[str, str]], optional): List of provider dictionaries with 'name', 'source', and 'version'.
+
+    - override_confirmation (bool): Flag to confirm overriding existing output type if different properties/providers found.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution, error message, or request for confirmation.
@@ -150,6 +175,21 @@ def register_output_type(
                     "success": False,
                     "instructions": "Please provide at least one of interfaces or attributes.",
                     "error": "Neither interfaces nor attributes provided.",
+                },
+                indent=2,
+            )
+
+        # Validate attributes and interfaces format (check for common nesting mistake)
+        format_validation_error = validate_attributes_and_interfaces_format(
+            interfaces, attributes
+        )
+        if format_validation_error:
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "Invalid parameter format for attributes or interfaces.",
+                    "instructions": "Fix the parameter format and call the function again with the corrected structure.",
+                    "error": format_validation_error["error"],
                 },
                 indent=2,
             )
