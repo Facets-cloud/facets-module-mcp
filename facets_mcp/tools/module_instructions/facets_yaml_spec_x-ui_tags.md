@@ -66,12 +66,10 @@ DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for validation failure
 ```
 
-```yaml
 x-ui-compare:
   field: spec.runtime.size.cpu_limit # IMPORTANT: path from spec till the field location
-  comparator: '<=' #operator with which comparision to be done
+  comparator: '<=' # operator with which comparison to be done
   x-ui-error-message: 'CPU cannot be more than CPU limit'  # Custom error for validation failure
-```
 
 ```yaml
 x-ui-visible-if:
