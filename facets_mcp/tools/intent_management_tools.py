@@ -259,7 +259,10 @@ def _read_module_intent(module_path: str) -> tuple[bool, str, str]:
     Internal: Read the module intent from facets.yaml.
     Returns (ok, intent, error_message)
     """
-    facets_path = os.path.join(os.path.abspath(module_path), "facets.yaml")
+    abs_path = os.path.abspath(module_path)
+    if not os.path.isdir(abs_path):
+        return False, "", f"Module path '{module_path}' is not a valid directory."
+    facets_path = os.path.join(abs_path, "facets.yaml")
     if not os.path.exists(facets_path):
         return False, "", "facets.yaml not found in module path."
     try:

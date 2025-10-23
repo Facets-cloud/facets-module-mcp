@@ -12,7 +12,10 @@ def check_intent_and_intent_details(module_path: str) -> tuple[bool, str]:
     Checks if the intent in facets.yaml exists in the control plane. If not, checks for presence of intentDetails.
     Returns (success, message). If not success, message contains user instructions and suggestions.
     """
-    facets_path = os.path.join(os.path.abspath(module_path), "facets.yaml")
+    abs_path = os.path.abspath(module_path)
+    if not os.path.isdir(abs_path):
+        return False, f"Module path '{module_path}' is not a valid directory."
+    facets_path = os.path.join(abs_path, "facets.yaml")
     if not os.path.exists(facets_path):
         return False, "facets.yaml not found in module path."
 
