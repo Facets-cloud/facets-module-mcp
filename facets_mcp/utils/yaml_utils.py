@@ -30,7 +30,10 @@ def validate_yaml(module_path: str, yaml_content: str) -> None:
     """
     import os
 
-    temp_path = os.path.join(os.path.abspath(module_path), "facets.yaml.new")
+    abs_path = os.path.abspath(module_path)
+    if not os.path.isdir(abs_path):
+        raise RuntimeError(f"Module path '{module_path}' is not a valid directory.")
+    temp_path = os.path.join(abs_path, "facets.yaml.new")
     try:
         with open(temp_path, "w") as temp_file:
             temp_file.write(yaml_content)
@@ -245,7 +248,14 @@ def read_and_validate_facets_yaml(
             - error_message: An error message if there was a problem, empty string otherwise
     """
     # Check if facets.yaml exists in the module path
-    facets_path = os.path.join(os.path.abspath(module_path), "facets.yaml")
+    abs_path = os.path.abspath(module_path)
+    if not os.path.isdir(abs_path):
+        return (
+            False,
+            "",
+            f"Module path '{module_path}' is not a valid directory.",
+        )
+    facets_path = os.path.join(abs_path, "facets.yaml")
     if not os.path.exists(facets_path):
         return (
             False,
