@@ -120,14 +120,16 @@ def create_or_update_intent(
         intent_api = IntentManagementApi(api_client)
 
         # Create the intent request DTO
-        intent_request = IntentRequestDTO(
-            name=name,
-            type=intent_type,
-            display_name=display_name,
-            description=description,
-            icon_url=icon_url,
-            inferred_from_module=False,
-        )
+        intent_kwargs = {
+            "name": name,
+            "type": intent_type,
+            "display_name": display_name,
+            "description": description,
+            "inferred_from_module": False,
+        }
+        if icon_url is not None:
+            intent_kwargs["icon_url"] = icon_url
+        intent_request = IntentRequestDTO(**intent_kwargs)
 
         # Create or update the intent using the correct API method
         try:
@@ -349,22 +351,24 @@ def map_module_to_project_type(
                 break
 
         # Prepare payload preserving existing values if not provided
-        payload = IntentRequestDTO(
-            name=intent,
-            type=project_type,
-            display_name=(
+        payload_kwargs = {
+            "name": intent,
+            "type": project_type,
+            "display_name": (
                 display_name
                 if display_name is not None
                 else getattr(existing, "display_name", intent)
             ),
-            description=(
+            "description": (
                 description
                 if description is not None
                 else getattr(existing, "description", f"Intent '{intent}'")
             ),
-            icon_url=icon_url,  # Only use explicitly provided icon_url
-            inferred_from_module=False,
-        )
+            "inferred_from_module": False,
+        }
+        if icon_url is not None:
+            payload_kwargs["icon_url"] = icon_url
+        payload = IntentRequestDTO(**payload_kwargs)
 
         response = intent_api.create_or_update_intent(payload)
         return json.dumps(
