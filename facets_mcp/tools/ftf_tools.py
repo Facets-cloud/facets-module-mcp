@@ -120,18 +120,16 @@ def generate_module_with_user_confirmation(
 @mcp.tool()
 def publish_module_to_facets_cp(
     module_path: str,
-    auto_create_intent: bool = True,
     skip_terraform_validation_if_provider_not_found: bool = False,
 ) -> str:
     """
-    Publish a module version to the Facets control plane using FTF CLI.
+    Publish a production-ready module version to the Facets control plane using FTF CLI.
 
-    This assumes the module has been previewed and validated. The publish action promotes
-    the module to be available broadly.
+    This marks the module as publishable for production and publishes it.
+    Uses 'ftf preview-module' with --publish and -f (publishable) flags.
 
     Args:
     - module_path (str): The path to the module.
-    - auto_create_intent (bool): Flag to auto-create intent if not exists.
     - skip_terraform_validation_if_provider_not_found (bool): Skip TF validation if provider missing.
 
     Returns:
@@ -155,76 +153,37 @@ def publish_module_to_facets_cp(
         git_repo_url = git_info["url"]
         git_ref = git_info["ref"]
 
-        # Build common args
-        common_args = []
-        if auto_create_intent:
-            common_args.extend(["-a", "true"])
-        # Always include git details
-        common_args.extend(["-g", git_repo_url, "-r", git_ref])
-        if skip_terraform_validation_if_provider_not_found:
-            common_args.extend(["--skip-terraform-validation", "true"])
-
-        # Try multiple CLI variants for compatibility across FTF versions
-        candidate_commands = [
-            ["ftf", "publish-module", module_path],
-            ["ftf", "publish", module_path],
-            ["ftf", "module", "publish", module_path],
-            ["ftf", "publish-module-version", module_path],
+        # Build command using preview-module with publish flags
+        command = [
+            "ftf",
+            "preview-module",
+            module_path,
+            "-a",
+            "true",  # Auto-create intent
+            "-f",
+            "true",  # Mark as publishable for production
+            "--publish",
+            "true",  # Actually publish the module
+            "--skip-output-write",
+            "true",  # Output types should be pre-registered
+            "-g",
+            git_repo_url,
+            "-r",
+            git_ref,
         ]
 
-        errors: list[str] = []
-        for base_cmd in candidate_commands:
-            try:
-                message = run_ftf_command(base_cmd + common_args)
-                return json.dumps(
-                    {
-                        "success": True,
-                        "message": message,
-                    },
-                    indent=2,
-                )
-            except Exception as e:
-                errors.append(f"{' '.join(base_cmd)} failed: {e!s}")
+        if skip_terraform_validation_if_provider_not_found:
+            command.extend(["--skip-terraform-validation", "true"])
 
-        # If none of the variants worked, attempt a safe fallback using preview-module
-        # Rationale: Current FTF embeds publish in preview via --publish flag; also allow -f true.
-        try:
-            preview_cmd = [
-                "ftf",
-                "preview-module",
-                module_path,
-                "-f",
-                "true",
-                "--publish",
-                "true",
-                "--skip-output-write",
-                "true",
-            ] + common_args
-            message = run_ftf_command(preview_cmd)
-            return json.dumps(
-                {
-                    "success": True,
-                    "message": (
-                        "Publish subcommand not found. Executed preview-module with --publish as fallback.\n\n"
-                        + message
-                    ),
-                },
-                indent=2,
-            )
-        except Exception as preview_error:
-            errors.append(f"{' '.join(preview_cmd)} failed: {preview_error!s}")
-            # Return aggregated error for quick diagnosis
-            return json.dumps(
-                {
-                    "success": False,
-                    "instructions": (
-                        "Failed to publish module using known CLI variants, and preview fallback also failed. "
-                        "Ensure your FTF CLI is up to date or provide the correct publish subcommand."
-                    ),
-                    "error": " | ".join(errors),
-                },
-                indent=2,
-            )
+        message = run_ftf_command(command)
+
+        return json.dumps(
+            {
+                "success": True,
+                "message": message,
+            },
+            indent=2,
+        )
 
     except Exception as e:
         return json.dumps(
@@ -557,7 +516,6 @@ def validate_module(
 @mcp.tool()
 def push_preview_module_to_facets_cp(
     module_path: str,
-    auto_create_intent: bool = True,
     skip_terraform_validation_if_provider_not_found: bool = False,
 ) -> str:
     """
@@ -566,7 +524,6 @@ def push_preview_module_to_facets_cp(
 
     Args:
     - module_path (str): The path to the module.
-    - auto_create_intent (bool): Flag to auto-create intent if not exists.
     - skip_terraform_validation_if_provider_not_found (bool): Flag to skip terraform validation during the process - send as true only if you see "Provider configuration not present" while validating.
 
     Returns:
@@ -589,9 +546,7 @@ def push_preview_module_to_facets_cp(
         git_repo_url = git_info["url"]
         git_ref = git_info["ref"]
 
-        command = ["ftf", "preview-module", module_path]
-        if auto_create_intent:
-            command.extend(["-a", "true"])
+        command = ["ftf", "preview-module", module_path, "-a", "true"]
         if skip_terraform_validation_if_provider_not_found:
             command.extend(["--skip-terraform-validation", "true"])
 
