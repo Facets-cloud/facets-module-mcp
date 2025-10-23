@@ -648,9 +648,9 @@ def write_outputs(
         # Helper to build terraform block for a field set
         def build_terraform_block(block_name, validated_fields, sensitive_fields):
             """Build terraform configuration block for output fields."""
-            lines = []
+            lines = [f"  {block_name} = {{"]
+
             if validated_fields:
-                lines.append(f"  {block_name} = {{")
                 for k, field_model in validated_fields.items():
                     rendered_value = render_terraform_value(field_model.value)
                     if field_model.sensitive:
@@ -667,7 +667,7 @@ def write_outputs(
                     )
                     lines.append(f"    secrets = {secrets_str}")
 
-                lines.append("  }")
+            lines.append("  }")
             return lines
 
         # Build outputs.tf content
