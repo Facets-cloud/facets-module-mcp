@@ -129,10 +129,7 @@ def mark_module_as_published(
     This marks the module as publishable for production and publishes it.
     Uses 'ftf preview-module' with --publish and -f (publishable) flags.
 
-    Usage Guidelines:
-    - Call this function by itself when you're completely certain about the available project types.
-    - If there's any uncertainty about parameters, use push_preview_module_to_facets_cp() first.
-    - Never guess or assume parameter values.
+    Note: Always use push_preview_module_to_facets_cp() to test the module before publishing.
 
     Args:
     - module_path (str): The path to the module.
