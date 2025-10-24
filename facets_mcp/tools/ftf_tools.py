@@ -27,6 +27,34 @@ from facets_mcp.utils.validation_utils import validate_no_provider_blocks
 from facets_mcp.utils.yaml_utils import validate_module_output_types
 
 
+def _validate_and_prepare_module_publish(
+    module_path: str,
+) -> tuple[bool, dict[str, Any]]:
+    """
+    Validate intent and gather git info for module publishing.
+
+    Args:
+        module_path (str): The path to the module.
+
+    Returns:
+        tuple: (success, result_dict)
+        - If success is False, result_dict contains error response
+        - If success is True, result_dict contains git_info with 'url' and 'ref'
+    """
+    # Validate intent
+    intent_ok, intent_message = check_intent_and_intent_details(module_path)
+    if not intent_ok:
+        return False, {
+            "success": False,
+            "instructions": intent_message,
+            "error": intent_message,
+        }
+
+    # Get git repository details
+    git_info = get_git_repo_info(working_directory)
+    return True, git_info
+
+
 @mcp.tool()
 def generate_module_with_user_confirmation(
     intent: str,
@@ -112,6 +140,76 @@ def generate_module_with_user_confirmation(
                 "success": False,
                 "message": "Module generation failed.",
                 "instructions": "Inform User: An error occurred while generating the module.",
+                "error": str(e),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+def mark_module_as_published(
+    module_path: str,
+    skip_terraform_validation_if_provider_not_found: bool = False,
+) -> str:
+    """
+    Publish a production-ready module version. This marks the module as publishable for production.
+
+    Note: Always use push_preview_module_to_facets_cp() to test the module before publishing.
+
+    Args:
+    - module_path (str): The path to the module.
+    - skip_terraform_validation_if_provider_not_found (bool): Flag to skip terraform validation during the process - send as true only if you see "Provider configuration not present" while validating.
+
+    Returns:
+    - str: A JSON string with the output from the FTF command execution.
+    """
+    try:
+        # Validate intent and get git repository details
+        success, result = _validate_and_prepare_module_publish(module_path)
+        if not success:
+            return json.dumps(result, indent=2)
+
+        git_info = result
+        git_repo_url = git_info["url"]
+        git_ref = git_info["ref"]
+
+        # Build command using preview-module with publish flags
+        command = [
+            "ftf",
+            "preview-module",
+            module_path,
+            "-a",
+            "true",  # Auto-create intent
+            "-f",
+            "true",  # Mark as publishable for production
+            "--publish",
+            "true",  # Actually publish the module
+            "--skip-output-write",
+            "true",  # Output types should be pre-registered
+            "-g",
+            git_repo_url,
+            "-r",
+            git_ref,
+        ]
+
+        if skip_terraform_validation_if_provider_not_found:
+            command.extend(["--skip-terraform-validation", "true"])
+
+        message = run_ftf_command(command)
+
+        return json.dumps(
+            {
+                "success": True,
+                "message": message,
+            },
+            indent=2,
+        )
+
+    except Exception as e:
+        return json.dumps(
+            {
+                "success": False,
+                "instructions": "Try to resolve the error if possible, otherwise inform the user: Failed to publish module to the control plane.",
                 "error": str(e),
             },
             indent=2,
@@ -477,8 +575,6 @@ def validate_module(
 @mcp.tool()
 def push_preview_module_to_facets_cp(
     module_path: str,
-    auto_create_intent: bool = True,
-    publishable: bool = False,
     skip_terraform_validation_if_provider_not_found: bool = False,
 ) -> str:
     """
@@ -487,35 +583,22 @@ def push_preview_module_to_facets_cp(
 
     Args:
     - module_path (str): The path to the module.
-    - auto_create_intent (bool): Flag to auto-create intent if not exists.
-    - publishable (bool): Flag to indicate if the module is publishable.
     - skip_terraform_validation_if_provider_not_found (bool): Flag to skip terraform validation during the process - send as true only if you see "Provider configuration not present" while validating.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution.
     """
     try:
-        # INTENT VALIDATION (before running FTF command)
-        intent_ok, intent_message = check_intent_and_intent_details(module_path)
-        if not intent_ok:
-            return json.dumps(
-                {
-                    "success": False,
-                    "instructions": intent_message,
-                    "error": intent_message,
-                },
-                indent=2,
-            )
-        # Get git repository details
-        git_info = get_git_repo_info(working_directory)
+        # Validate intent and get git repository details
+        success, result = _validate_and_prepare_module_publish(module_path)
+        if not success:
+            return json.dumps(result, indent=2)
+
+        git_info = result
         git_repo_url = git_info["url"]
         git_ref = git_info["ref"]
 
-        command = ["ftf", "preview-module", module_path]
-        if auto_create_intent:
-            command.extend(["-a", str(auto_create_intent)])
-        if publishable:
-            command.extend(["-f", str(publishable)])
+        command = ["ftf", "preview-module", module_path, "-a", "true"]
         if skip_terraform_validation_if_provider_not_found:
             command.extend(["--skip-terraform-validation", "true"])
 
