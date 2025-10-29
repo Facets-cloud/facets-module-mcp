@@ -11,6 +11,12 @@ x-ui-output-type: "@outputs/kubernetes_service"  # Select from modules exporting
 ```
 
 ```yaml
+x-ui-output: 
+  type: @outputs/pubsub # Select from modules exporting this output type
+  field: 'attributes.id' # List down id of all the modules that are filtered using type. Mark a particular field from a referenced output to be used, instead of the entire output object.
+```
+
+```yaml
 x-ui-secret-ref: true  # Reference a secret defined at the project level. Use this when a field has to be secret
 ```
 
