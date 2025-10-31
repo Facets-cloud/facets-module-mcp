@@ -38,7 +38,7 @@ This MCP (Model Context Protocol) Server for the Facets Module assists in creati
 | `write_outputs`                          | Writes the `outputs.tf` file for a module with output attributes and interfaces in a local block.                                       |
 | `write_readme_file`                      | Writes a `README.md` file for the module directory with AI-generated content.                                                           |
 | `write_generic_file`                     | Writes files generically with working directory and file type checks. Path: `facets_mcp/tools/module_files.py`                            |
-| `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation.                                                    |
+| `generate_module_with_user_confirmation` | Generates a new Terraform module scaffold with dry-run preview and user confirmation. Supports single or multiple cloud providers (comma-separated). |
 | `validate_module`                        | Validates a Terraform module directory using FTF CLI standards and checks output types.                                                 |
 | `push_preview_module_to_facets_cp`       | Previews a module by pushing a test version to the control plane with git context extracted automatically.                             |
 | `register_output_type`                   | Registers a new output type in the Facets control plane with interfaces and attributes and providers.                                                  |

@@ -29,7 +29,7 @@ From the user's answer, extract or clarify the following fields:
 |-----------------|-------------------------------------------------------------|------------------------------------------------------------------------|
 | **Intent**      | The abstract capability (e.g., `gcp-databricks-cluster`)    | "What should be the intent name for this module?"                      |
 | **Flavor**      | A specific variant (e.g., `secure-access`, `ha`)            | "Is there a flavor or variant you want to capture in the module name?" |
-| **Cloud**       | Target cloud provider (`gcp`, `aws`, `azure`)               | "Which cloud provider is this for?"                                    |
+| **Cloud**       | Target cloud provider(s). Supports single or multiple clouds (comma-separated).<br>Examples: `aws`, `gcp`, `aws,gcp,azure`, `aws, gcp, azure` | "Which cloud provider(s) is this for?"                                    |
 | **Title**       | Display name for UI (e.g., "Secure GCP Databricks Cluster") | "What's a user-friendly title for this module?"                        |
 | **Description** | One-liner describing what this module does                  | "Describe this module in a sentence or two"                            |
 
