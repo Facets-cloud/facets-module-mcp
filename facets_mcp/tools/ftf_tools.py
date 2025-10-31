@@ -68,7 +68,7 @@ def generate_module_with_user_confirmation(
     ⚠️ IMPORTANT: REQUIRES USER CONFIRMATION ⚠️
     This function performs an irreversible action
 
-    Tool to generate a new module using FTF CLI.
+    Tool to generate a new module using FTF CLI with support for multiple cloud providers.
     Step 1 - ALWAYS use dry_run=True first. This is an irreversible action.
     Step 2 - Present the dry run output to the user in textual format.
     Step 3 - Ask if user will like to make any changes in passed arguments and modify them
@@ -77,20 +77,32 @@ def generate_module_with_user_confirmation(
     Args:
     - intent (str): The intent for the module.
     - flavor (str): The flavor of the module.
-    - cloud (str): The cloud provider.
+    - cloud (str): The cloud provider(s). Supports multiple clouds as comma-separated values.
+                   Examples:
+                   - Single cloud: "aws"
+                   - Multiple clouds: "aws,gcp,azure" or "aws, gcp, azure" (whitespace is handled)
     - title (str): The title of the module.
     - description (str): The description of the module.
     - dry_run (bool): If True, returns a description of the generation without executing. MUST set to True initially.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution.
+
+    Examples:
+    - Single cloud: cloud="aws" → clouds: ['aws']
+    - Multiple clouds: cloud="aws,gcp,azure" → clouds: ['aws', 'gcp', 'azure']
+    - With spaces: cloud="aws, gcp , azure" → clouds: ['aws', 'gcp', 'azure']
     """
+    # Parse clouds list from comma-separated input
+    clouds_list = [c.strip() for c in cloud.split(",")]
+
     if dry_run:
         return json.dumps(
             {
                 "success": True,
                 "message": (
-                    f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', cloud='{cloud}', title='{title}', description='{description}'. "
+                    f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', "
+                    f"cloud(s)={clouds_list}, title='{title}', description='{description}'. "
                     f"Get confirmation from the user before running with dry_run=False to execute the generation."
                 ),
                 "instructions": (
@@ -101,6 +113,7 @@ def generate_module_with_user_confirmation(
                     "intent": intent,
                     "flavor": flavor,
                     "cloud": cloud,
+                    "clouds": clouds_list,
                     "title": title,
                     "description": description,
                 },
@@ -130,7 +143,7 @@ def generate_module_with_user_confirmation(
             {
                 "success": True,
                 "message": "Module generation successful.",
-                "data": {"output": output},
+                "data": {"output": output, "clouds": clouds_list},
             },
             indent=2,
         )
