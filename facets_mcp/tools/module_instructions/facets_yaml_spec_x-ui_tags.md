@@ -47,6 +47,9 @@ x-ui-override-disable: true  # Prevent overrides in any environment. Use this wh
 ```yaml
 x-ui-toggle: true  # Render this field group as collapsible. Use this to keep the advanced or any other block collapsed by default.
 ```
+```yaml
+x-ui-artifact: docker_image # Allows user to attach artifact for all environments. Value decides whether it will be 'docker_image' or 'freestyle' (zip artifact).
+```
 
 ```yaml
 x-ui-typeable: true  # Allows a field value to be typed instead of selecting it from the dropdown values.
@@ -72,10 +75,12 @@ DONT OVERUSE THIS FIELD, WE WOULD LIKE TO KNOW SCHEMA AS MUCH AS POSSIBLE
 x-ui-error-message: "CIDR must be a valid private IP block"  # Custom error for validation failure
 ```
 
+```yaml
 x-ui-compare:
   field: spec.runtime.size.cpu_limit # IMPORTANT: path from spec till the field location
   comparator: '<=' # operator with which comparison to be done
   x-ui-error-message: 'CPU cannot be more than CPU limit'  # Custom error for validation failure
+```
 
 ```yaml
 x-ui-visible-if:
