@@ -5,9 +5,6 @@ Use these tags in your module's `facets.yaml`. Each gives a capability on the be
 ### Tags present at root level
 
 ```yaml
-name_length_limit: 25 # restricts the length of the resource name to the value provided (optional)
-```
-
-```yaml
-name_regex: "^[A-Za-z][A-Za-z0-9-]{0,19}$"  # any resource added will comply with this regex format (optional)
+controlPlaneUISettings: # tag to define all fields that will govern UI behavior of the resource, apart from the form.
+    name_regex: "^[A-Za-z][A-Za-z0-9-]{0,19}$"  # any resource added will comply with this regex format (optional)
 ```
