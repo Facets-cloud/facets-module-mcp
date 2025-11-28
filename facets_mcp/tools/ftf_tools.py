@@ -63,6 +63,7 @@ def generate_module_with_user_confirmation(
     title: str,
     description: str,
     dry_run: bool = True,
+    working_dir: str | None = None,
 ) -> str:
     """
     ⚠️ IMPORTANT: REQUIRES USER CONFIRMATION ⚠️
@@ -81,16 +82,20 @@ def generate_module_with_user_confirmation(
     - title (str): The title of the module.
     - description (str): The description of the module.
     - dry_run (bool): If True, returns a description of the generation without executing. MUST set to True initially.
+    - working_dir (str, optional): Working directory where the module will be generated. If not provided, uses the default working directory configured for the MCP server.
 
     Returns:
     - str: A JSON string with the output from the FTF command execution.
     """
+    # Determine which working directory to use
+    target_working_dir = working_dir if working_dir is not None else working_directory
+
     if dry_run:
         return json.dumps(
             {
                 "success": True,
                 "message": (
-                    f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', cloud='{cloud}', title='{title}', description='{description}'. "
+                    f"Dry run: The following module will be generated with intent='{intent}', flavor='{flavor}', cloud='{cloud}', title='{title}', description='{description}' in directory '{target_working_dir}'. "
                     f"Get confirmation from the user before running with dry_run=False to execute the generation."
                 ),
                 "instructions": (
@@ -103,6 +108,7 @@ def generate_module_with_user_confirmation(
                     "cloud": cloud,
                     "title": title,
                     "description": description,
+                    "working_directory": target_working_dir,
                 },
             },
             indent=2,
@@ -121,7 +127,7 @@ def generate_module_with_user_confirmation(
         title,
         "-d",
         description,
-        working_directory,
+        target_working_dir,
     ]
 
     try:
