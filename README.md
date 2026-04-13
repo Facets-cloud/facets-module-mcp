@@ -1,4 +1,6 @@
-﻿# Facets Module MCP Server
+﻿> **⚠️ DEPRECATED**: This repository is no longer actively maintained. Please use Praxis instead. If you need this functionality outside of Praxis, use the [Raptor CLI](https://github.com/Facets-cloud/raptor-releases).
+
+# Facets Module MCP Server
 
 This MCP (Model Context Protocol) Server for the Facets Module assists in creating and managing Terraform modules for infrastructure as code. It integrates with Facets.cloud's FTF CLI, providing secure and robust tools for module generation, validation, and management to support cloud-native infrastructure workflows.
 
